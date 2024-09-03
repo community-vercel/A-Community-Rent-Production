@@ -13,8 +13,7 @@ import Message from "@/components/Message";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { RegisterZod } from "@/zod/RegisterZod";
-
-import { supabase } from "@/lib/supabase";
+import usePostApi from "@/hooks/usePostApis";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
@@ -30,50 +29,70 @@ export default function Home() {
   } = useForm({
     resolver: zodResolver(RegisterZod),
   });
+  const { data, loading, error, postApi } = usePostApi();
 
   const [message, setMessage] = useState(null);
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
   const user_meta = useSelector((state) => state.auth.user_meta);
 
+
+
+
+
+
+
   useEffect(() => {
-    if (user.id && user_meta.role) {
-      console.log(user,user_meta.role)
-      if(user_meta.role == 'super_admin'){
-        router.push("/dashboard/business");
-      }else{
-        router.push("/");
-      }
-    }
-  }, [user_meta.role]);
+    if (data.ErrorCode === 0) {
+      // Set the user details in the Redux store
+      // dispatch(setUser({ user: data.user }));
+      // dispatch(setSession({ session: data.session }));
+      // dispatch(setIsAuthenticated({ isAuthenticated: true }));
+      // dispatch(setUserMeta({ user_meta: usermetaData }));
+      setMessage('Registration successful. Please check your email to confirm your account.');
+       router.push("/");
+  } else {
+      setMessage(data.ErrorMsg || 'Registration failed. Please try again.');
+  }
+  }, [data.ErrorCode]);
+ 
 
   const onSubmit = async (formData) => {
     setMessage('')
     try {
-      const { data, error:errorAuth } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            full_name: formData.fullname,
-          },
-        },
-      });
-      if (errorAuth) throw errorAuth;
-      console.log("Registration successful", data);
-      dispatch(setUser({ user: data.user }));
-      dispatch(setSession({ session: data.session }));
-      dispatch(setIsAuthenticated({ isAuthenticated: true }));
+      const selectedRoles = formData.role || [];
+      
+    const requestBody = {
+      name: formData.fullname,
+      email: formData.email,
+      password: formData.password,
+      roles: selectedRoles, // This will be an array of selected roles
+    };
 
+      // Call postApi directly
+      await postApi('http://127.0.0.1:8000/registerUser', requestBody);
+      console.log("Registration successful", data.ErrorCode,);
+   if (data.ErrorCode === 0) {
+            // Set the user details in the Redux store
+            // dispatch(setUser({ user: data.user }));
+            // dispatch(setSession({ session: data.session }));
+            // dispatch(setIsAuthenticated({ isAuthenticated: true }));
+            // dispatch(setUserMeta({ user_meta: usermetaData }));
+            setMessage('Registration successful. Please check your email to confirm your account.');
+             router.push("/");
+        } else {
+            setMessage(data.ErrorMsg || 'Registration failed. Please try again.');
+        }
+      // If needed, you can dispatch actions or navigate here
       
-      const { data:usermetaData, error } = await supabase .from('user_meta').insert({ role: formData.role,user_id:data.user.id }).select().single()
-      if(error) throw error
-      dispatch(setUserMeta({user_meta:usermetaData}))
-      
+
     } catch (error) {
       setMessage(error.message);
       console.error("Registration error", error);
     }
+
+
+   
   };
 
   return (
@@ -104,8 +123,71 @@ export default function Home() {
           <UserIcon />
         </InputField>
       </div>
-
       <div className="mb-5">
+  <Formlabel text="Register as" />
+  <div className="grid grid-cols-2 gap-4">
+    <div className="flex items-center gap-2">
+      <input
+        type="checkbox" 
+        value="events"
+        id="events"
+        {...register("role")}
+        className="form-checkbox"
+      />
+      <label htmlFor="events" className="text-sm">Events</label>
+    </div>
+    <div className="flex items-center gap-2">
+      <input
+        type="checkbox" 
+        value="business"
+        id="business"
+        {...register("role")}
+        className="form-checkbox"
+      />
+      <label htmlFor="business" className="text-sm">Business Directory</label>
+    </div>
+    <div className="flex items-center gap-2">
+      <input
+        type="checkbox" 
+        value="community"
+        id="community"
+        {...register("role")}
+        className="form-checkbox"
+      />
+      <label htmlFor="community" className="text-sm">Community</label>
+    </div>
+    <div className="flex items-center gap-2">
+      <input
+        type="checkbox" 
+        value="rent"
+        id="rent"
+        {...register("role")}
+        className="form-checkbox"
+      />
+      <label htmlFor="rent" className="text-sm">Rent</label>
+    </div>
+    <div className="flex items-center gap-2">
+      <input
+        type="checkbox" 
+        value="job"
+        id="job"
+        {...register("role")}
+        className="form-checkbox"
+      />
+      <label htmlFor="job" className="text-sm">Job Portal</label>
+    </div>
+  </div>
+
+  {errors.role?.message && (
+    <span className="text-red-400 text-sm pl-1">
+      {errors.role?.message}
+    </span>
+  )}
+</div>
+
+
+
+      {/* <div className="mb-5">
         <Formlabel text="Register as" />
         <div className="flex gap-4">
           <div className="flex gap-2 cursor-pointer">
@@ -134,7 +216,7 @@ export default function Home() {
             {errors.role?.message}
           </span>
         )}
-      </div>
+      </div> */}
 
       <div className="">
         <Formlabel text="Password" forLabel="password" />
