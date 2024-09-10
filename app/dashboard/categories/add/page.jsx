@@ -12,11 +12,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AddCategoryZod } from "@/zod/AddCategoryZod";
 import useAuth from "@/hooks/useAuth";
 import uploadImage from "@/utils/uploadImage";
-
+import { ToastContainer, toast } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
 const Page = () => {
   const router = useRouter();
   const auth = useAuth();
   const [message, setMessage] = useState(null);
+  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
+
   if (auth && !auth.user?.id) router.push("/");
 
   const [thumbnail, setThumbnail] = useState(null);
@@ -32,54 +35,87 @@ const Page = () => {
   });
 
   const onSubmit = async (formData) => {
+    console.log("data",thumbnail)
     setMessage("");
     try {
-      if (!thumbnail) return setMessage("Please select thumbnail");
-      if (!cover) return setMessage("Please select cover");
+      if (!thumbnail) return setMessage("Please select a thumbnail");
+      if (!cover) return setMessage("Please select a cover");
 
-      const { data: catData, error } = await supabase
-        .from("category")
-        .insert({ name: formData.category })
-        .select()
-        .single();
-      if (error) throw error;
+      // Create FormData object to send data and files
+      const form = new FormData();
+      form.append("category", formData.category);
+      form.append("thumbnail", thumbnail[0]); // assuming single file
+      form.append("cover", cover[0]); // assuming single file
+     
 
-      const uploadResultThumb = await uploadImage(
-        catData.id,
-        thumbnail,
-        "category",
-        "category-images"
-      );
-      if(uploadResultThumb.error) throw error 
-      console.log(uploadResultThumb);
+      const response = await fetch(`${serverurl}add-category/`, {
+        method: "POST",
+        body: form,
+      });
 
-      const uploadResultCover = await uploadImage(
-        catData.id,
-        cover,
-        "category",
-        "category-images"
-      );
-      if(uploadResultCover.error) throw error 
-      console.log(uploadResultCover);
+      const result = await response.json();
+
+      if (response.ok) {
+        toast.success(result.message, { position: "top-right" }); // Show success toast
+        setMessage(result.message);
+        router.push('/')
+        // Reset form or redirect as needed
+      } else {
+        toast.error(result.error || "An error occurred", { position: "top-right" }); // Show error toast
+        setMessage(result.error || "An error occurred");
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred", { position: "top-right" });
+      setMessage("An unexpected error occurred");
+      console.error(error);
+    }
+    // try {
+    //   if (!thumbnail) return setMessage("Please select thumbnail");
+    //   if (!cover) return setMessage("Please select cover");
+
+    //   const { data: catData, error } = await supabase
+    //     .from("category")
+    //     .insert({ name: formData.category })
+    //     .select()
+    //     .single();
+    //   if (error) throw error;
+
+    //   const uploadResultThumb = await uploadImage(
+    //     catData.id,
+    //     thumbnail,
+    //     "category",
+    //     "category-images"
+    //   );
+    //   if(uploadResultThumb.error) throw error 
+    //   console.log(uploadResultThumb);
+
+    //   const uploadResultCover = await uploadImage(
+    //     catData.id,
+    //     cover,
+    //     "category",
+    //     "category-images"
+    //   );
+    //   if(uploadResultCover.error) throw error 
+    //   console.log(uploadResultCover);
  
       
-      const { data:updateImgsData, error:updateImgsError } = await supabase
-      .from('category')
-      .update({ thumbnail: uploadResultThumb[0].url, cover:uploadResultCover[0].url})
-      .eq('id', catData.id)
-      .select()
+    //   const { data:updateImgsData, error:updateImgsError } = await supabase
+    //   .from('category')
+    //   .update({ thumbnail: uploadResultThumb[0].url, cover:uploadResultCover[0].url})
+    //   .eq('id', catData.id)
+    //   .select()
 
-      if(updateImgsError) {
-        throw new Error('Error while inserting images') 
-        console.log(updateImgsError)
-      }
-      console.log(updateImgsData)
-      setMessage("Added Successfully");
-    } catch (error) {
-      if (error.message.includes("duplicate"))
-        return setMessage("Category already exists!");
-      setMessage(error.message);
-    }
+    //   if(updateImgsError) {
+    //     throw new Error('Error while inserting images') 
+    //     console.log(updateImgsError)
+    //   }
+    //   console.log(updateImgsData)
+    //   setMessage("Added Successfully");
+    // } catch (error) {
+    //   if (error.message.includes("duplicate"))
+    //     return setMessage("Category already exists!");
+    //   setMessage(error.message);
+    // }
   };
 
  

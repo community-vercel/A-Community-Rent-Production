@@ -13,10 +13,11 @@ import { Bounce, toast } from "react-toastify";
 const Page = () => {
   const router = useRouter();
   const { user, user_meta } = useSelector((state) => state.auth);
-
+const [error,setError]=useState("")
   const [loading, setLoading] = useState(true);
   const [selectedRowsState, setSelectedRows] = useState(false);
   const [toggledClearRows, setToggleClearRows] = useState(false);
+  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
 
   const columns = [
     {
@@ -77,38 +78,38 @@ const Page = () => {
         item.phone.toLowerCase().includes(filterText.toLowerCase()))
   );
 
-  useEffect(() => {
-    if (!user && user_meta.role !== "super_admin") router.push("/");
-    getBusinesses();
-  }, []);
+  // useEffect(() => {
+  //   if (!user && user_meta.role !== "super_admin") router.push("/");
+  //   getBusinesses();
+  // }, []);
+
+  // useEffect(() => {
+  //   if (!user && user_meta.role !== "super_admin") router.push("/"); 
+  // }, [user]);
 
   useEffect(() => {
-    if (!user && user_meta.role !== "super_admin") router.push("/"); 
-  }, [user]);
+    if (user && !user.id) router.push("/");
 
-  const getBusinesses = async () => {
-    try {
-      if (user_meta.role === "super_admin") {
-        const { data, error } = await supabase
-          .from("business")
-          .select()
-          .eq("isArchived", false);
-        if (error) throw error;
-        setBusiness(data);
-      } else {
-        const { data, error } = await supabase
-          .from("business")
-          .select()
-          .eq("user_id", user.id);
-        if (error) throw error;
-        setBusiness(data);
+    const  getBusinesses = async () => {
+      try {
+        const response = await fetch(`${serverurl}get-business/`);
+        const result = await response.json();
+        if (response.ok) {
+          
+          setBusiness(result.data); 
+               } else {
+          setError(result.error || 'Failed to fetch busniess');
+        }
+      } catch (error) {
+        setError('An unexpected error occurred');
+      } finally {
+        setLoading(false);
       }
+    };
 
-      setLoading(false);
-    } catch (error) {
-      console.log(error);
-    }
-  };
+    getBusinesses();
+   
+  }, []);
 
   // select selected rows
   const onSelectRowChange = ({ selectedRows }) => {

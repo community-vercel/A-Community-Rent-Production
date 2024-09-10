@@ -53,100 +53,184 @@ const Page = () => {
 
   const [selectedStateDB, setSelectedStateDB] = useState({});
   const [selectedCityDB, setSelectedCityDB] = useState({});
+  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
 
   useEffect(() => {
-    if (user && !user.id) router.push("/");
+    // if (user && !user.id) router.push("/");
     GetLanguages().then((result) => {
       setLanguageList(result);
     });
-
-    // function to fill the form data from data base
     const getData = async () => {
       try {
-        // get all current buiness categories
-        const { data, error } = await supabase
-          .from("category_business")
-          .select(`category(id,name)`)
-          .eq("business_id", params.id);
-        let currentCategories =
-          data.length > 0 &&
-          data.map((item) => {
-            return { label: item?.category?.name, value: item?.category?.id };
-          });
+        setLoading(true);
+    
+        // Define the business ID from the params (assuming `params.id` is set elsewhere)
+        const businessId = params.id;
+    
+        formData={
+          id:businessId
+        }
+        // Fetch business details, categories, and tags from the Django API
+        const response = await fetch(`${serverurl}get-specifibusiness/`, {
+          method: 'POST',
+          body: JSON.stringify(formData),
+      });
+
+      const { data, ErrorCode, ErrorMsg } = await response.json();
+      if (ErrorCode !== 0) {
+          throw new Error(ErrorMsg);
+        }
+    
+        const { business, categories, tags } = data;
+    
+        // Set business details in state
+        setValue("b_name", business.name);
+        setValue("b_description", business.description);
+        setValue("b_email", business.email);
+        setValue("b_phone", business.phone);
+        setValue("b_website", business.website);
+        setValue("b_location", business.location);
+        setValue("b_operating_hours", business.operating_hours);
+        setValue("b_zip", business.zip);
+        setValue("b_facebook", business.socials?.facebook);
+        setValue("b_instagram", business.socials?.instagram);
+        setValue("b_youtube", business.socials?.youtube);
+        setValue("b_tiktok", business.socials?.tiktok);
+        setValue("b_twitter", business.socials?.twitter);
+        setValue("b_discount_code", business.discount_code);
+        setValue("b_discount_message", business.discount_message);
+        setValue("b_language", business.language);
+    
+        setLogoDB(business.logo);
+        setImagesDB(business.images);
+    
+        // Set current categories
+        const currentCategories = categories.map((item) => ({
+          label: item.name,
+          value: item.id
+        }));
         setSelectedCategoriesDB(currentCategories);
-
-        // get all available categories list
-        const { data: allCats, error: alCatsError } = await supabase
-          .from("category")
-          .select();
-        if (alCatsError) throw alCatsError;
-        let reArrangeData = allCats.map((item) => {
-          return { value: item?.id, label: item?.name };
-        });
+    
+        // Set tags
+        setValue("b_tags", tags.map(tag => tag.tag).join(','));
+    
+        // Set categories
+        const reArrangeData = categories.map((item) => ({
+          value: item.id,
+          label: item.name
+        }));
         setCategories(reArrangeData);
-
-        // get tags
-        const { data: tags_data, error: tag_error } = await supabase
-          .from("tag_business")
-          .select("*")
-          .eq("business_id", params.id)
-          .limit(1);
-        if (!tag_error) {setValue("b_tags", tags_data.tag);}
-        
-
-        // get business details
-        const { data: businessDetails, error: businessDetailsError } =
-          await supabase
-            .from("business")
-            .select("*")
-            .eq("id", params.id)
-            .single();
-        if (businessDetailsError) throw businessDetailsError;
-        setValue("b_name", businessDetails.name);
-        setValue("b_description", businessDetails.description);
-        setValue("b_email", businessDetails.email);
-        setValue("b_phone", businessDetails.phone);
-        setValue("b_website", businessDetails.website);
-        setValue("b_location", businessDetails.location);
-        setValue("b_operating_hours", businessDetails.operating_hours);
-        // setValue("b_state", businessDetails.state);
-        // setValue("b_country", businessDetails.country);
-        // setValue("b_city", businessDetails.city);
-        setValue("b_zip", businessDetails.zip);
-        setValue("b_facebook", businessDetails.socials?.facebook);
-        setValue("b_instagram", businessDetails.socials?.instagram);
-        setValue("b_youtube", businessDetails.socials?.youtube);
-        setValue("b_tiktok", businessDetails.socials?.tiktok);
-        setValue("b_twitter", businessDetails.socials?.twitter);
-        setValue("b_discount_code", businessDetails.discount_code);
-        setValue("b_discount_message", businessDetails.discount_message);
-        setValue("b_language", businessDetails.language);
-
-        setLogoDB(businessDetails.logo);
-        setImagesDB(businessDetails.images);
-
-        setLoading(false);
-        console.log(businessDetails)
-
+    
+        // Fetch states and cities based on business details
         GetState(countryid).then((states) => {
           states.map(state => {
-            if(state.name === businessDetails.state) {
-              setSelectedStateDB(state)
+            if (state.name === business.state) {
+              setSelectedStateDB(state);
               GetCity(countryid, state.id).then((cities) => {
-                cities.map(city =>{
-                  if(city.name === businessDetails.city){
-                    setSelectedCityDB(city) 
+                cities.map(city => {
+                  if (city.name === business.city) {
+                    setSelectedCityDB(city);
                   }
-                })
+                });
               });
             }
-          })
-        });  
-
+          });
+        });
+    
+        setLoading(false);
       } catch (error) {
         console.log(error);
+        setLoading(false);
       }
     };
+    
+    // function to fill the form data from data base
+    // const getData = async () => {
+    //   try {
+    //     // get all current buiness categories
+    //     const { data, error } = await supabase
+    //       .from("category_business")
+    //       .select(`category(id,name)`)
+    //       .eq("business_id", params.id);
+    //     let currentCategories =
+    //       data.length > 0 &&
+    //       data.map((item) => {
+    //         return { label: item?.category?.name, value: item?.category?.id };
+    //       });
+    //     setSelectedCategoriesDB(currentCategories);
+
+    //     // get all available categories list
+    //     const { data: allCats, error: alCatsError } = await supabase
+    //       .from("category")
+    //       .select();
+    //     if (alCatsError) throw alCatsError;
+    //     let reArrangeData = allCats.map((item) => {
+    //       return { value: item?.id, label: item?.name };
+    //     });
+    //     setCategories(reArrangeData);
+
+    //     // get tags
+    //     const { data: tags_data, error: tag_error } = await supabase
+    //       .from("tag_business")
+    //       .select("*")
+    //       .eq("business_id", params.id)
+    //       .limit(1);
+    //     if (!tag_error) {setValue("b_tags", tags_data.tag);}
+        
+
+    //     // get business details
+    //     const { data: businessDetails, error: businessDetailsError } =
+    //       await supabase
+    //         .from("business")
+    //         .select("*")
+    //         .eq("id", params.id)
+    //         .single();
+    //     if (businessDetailsError) throw businessDetailsError;
+    //     setValue("b_name", businessDetails.name);
+    //     setValue("b_description", businessDetails.description);
+    //     setValue("b_email", businessDetails.email);
+    //     setValue("b_phone", businessDetails.phone);
+    //     setValue("b_website", businessDetails.website);
+    //     setValue("b_location", businessDetails.location);
+    //     setValue("b_operating_hours", businessDetails.operating_hours);
+    //     // setValue("b_state", businessDetails.state);
+    //     // setValue("b_country", businessDetails.country);
+    //     // setValue("b_city", businessDetails.city);
+    //     setValue("b_zip", businessDetails.zip);
+    //     setValue("b_facebook", businessDetails.socials?.facebook);
+    //     setValue("b_instagram", businessDetails.socials?.instagram);
+    //     setValue("b_youtube", businessDetails.socials?.youtube);
+    //     setValue("b_tiktok", businessDetails.socials?.tiktok);
+    //     setValue("b_twitter", businessDetails.socials?.twitter);
+    //     setValue("b_discount_code", businessDetails.discount_code);
+    //     setValue("b_discount_message", businessDetails.discount_message);
+    //     setValue("b_language", businessDetails.language);
+
+    //     setLogoDB(businessDetails.logo);
+    //     setImagesDB(businessDetails.images);
+
+    //     setLoading(false);
+    //     console.log(businessDetails)
+
+    //     GetState(countryid).then((states) => {
+    //       states.map(state => {
+    //         if(state.name === businessDetails.state) {
+    //           setSelectedStateDB(state)
+    //           GetCity(countryid, state.id).then((cities) => {
+    //             cities.map(city =>{
+    //               if(city.name === businessDetails.city){
+    //                 setSelectedCityDB(city) 
+    //               }
+    //             })
+    //           });
+    //         }
+    //       })
+    //     });  
+
+    //   } catch (error) {
+    //     console.log(error);
+    //   }
+    // };
 
     getData();
   }, []);

@@ -8,12 +8,14 @@ import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import DataTable from "react-data-table-component";
 import { useSelector } from "react-redux";
-
+import useGetApi from "@/hooks/useGetApis";
 const Page = () => {
   const router = useRouter();
   const user = useSelector((state) => state.auth.user);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState();
+  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
 
+// const { data, loading, error } = useGetApi('http://127.0.0.1:8000/get-categories/');
   const columns = [
     {
       name: "Name",
@@ -53,22 +55,25 @@ const Page = () => {
   );
 
   useEffect(() => {
-    if (user && !user.id) router.push("/");
-    const getCategories = async () => {
+    const fetchCategories = async () => {
       try {
-        setLoading(true);
-        const { data, error } = await supabase.from("category").select();
-        if (error) throw error;
-        setCategory(data);
+        const response = await fetch(`${serverurl}get-categories/`);
+        const result = await response.json();
+        if (response.ok) {
+          setCategory(result);
+        } else {
+          setError(result.error || 'Failed to fetch categories');
+        }
       } catch (error) {
-        console.log(error);
+        setError('An unexpected error occurred');
       } finally {
         setLoading(false);
       }
     };
 
-    getCategories();
+    fetchCategories();
   }, []);
+
 
   return (
     <>

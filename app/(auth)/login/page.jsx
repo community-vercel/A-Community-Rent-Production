@@ -44,47 +44,90 @@ export default function Home() {
   const [checkboxRole, setCheckboxRole] = useState('user');
 
   useEffect(() => {
-    if (user && user.id && user_meta.role) {
-      router.push("/");
-    }
-  }, []);
+    if (user && user.id && user_meta.role===1) {
+      router.push("/dashboard/business");
 
+    }
+    if (user && user.id && user_meta.role===3) {
+      router.push("/places");
+
+    }
+  }, [user]);
+  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
   const onSubmit = async (formData) => {
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword(
-        {
-          email: formData.email,
-          password: formData.password,
-        }
-      );
-      if (authError) throw authError;
+      const payload = {
+        username: formData.email,
+        password: formData.password,
+      
+      };
+      const response = await fetch(`${serverurl}login/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error('Login failed');
+      }
+
+      const data = await response.json();
+      console.log('Login successful:', data);
       dispatch(setUser({ user: data.user }));
       dispatch(setSession({ session: data.session }));
       dispatch(setIsAuthenticated({ isAuthenticated: true }));
-      console.log("login successful");
+      dispatch(setUserMeta({ user_meta: data.user_meta }));
 
-      const { data: usermetaData, error } = await supabase
-        .from("user_meta")
-        .select("*")
-        .eq("user_id", data.user.id)
-        .single();
-      if (usermetaData && usermetaData.id) {
-        dispatch(setUserMeta({ user_meta: usermetaData }));
-        dispatch(setIsAuthenticated({ isAuthenticated: true }));
-        if(usermetaData.role == 'super_admin'){
+      // Handle successful login (e.g., redirect or store token)
+       if(data.user.role == '1'){
           router.push("/dashboard/business");
-        }else{
-          router.push("/");
+        } if(usermetaData.role == '3'){
+          router.push("/places");
         }
-      } else {
-        setCheckIfRoleExits(false);
-      }
-      console.log(usermetaData, error);
-    } catch (error) {
-      setMessage(error.message);
-      console.error("login error", error);
+      router.push("/");
+
+      console.log('Login successful:', data);
+    } catch (err) {
+      setError(err.message);
     }
-  };
+  }
+  //   // try {
+  //   //   const { data, error: authError } = await supabase.auth.signInWithPassword(
+  //   //     {
+  //   //       email: formData.email,
+  //   //       password: formData.password,
+  //   //     }
+  //   //   );
+  //   //   if (authError) throw authError;
+  //   //   dispatch(setUser({ user: data.user }));
+  //   //   dispatch(setSession({ session: data.session }));
+  //   //   dispatch(setIsAuthenticated({ isAuthenticated: true }));
+  //   //   console.log("login successful");
+
+  //   //   const { data: usermetaData, error } = await supabase
+  //   //     .from("user_meta")
+  //   //     .select("*")
+  //   //     .eq("user_id", data.user.id)
+  //   //     .single();
+  //   //   if (usermetaData && usermetaData.id) {
+  //   //     dispatch(setUserMeta({ user_meta: usermetaData }));
+  //   //     dispatch(setIsAuthenticated({ isAuthenticated: true }));
+  //   //     if(usermetaData.role == 'super_admin'){
+  //   //       router.push("/dashboard/business");
+  //   //     }else{
+  //   //       router.push("/");
+  //   //     }
+  //   //   } else {
+  //   //     setCheckIfRoleExits(false);
+  //   //   }
+  //   //   console.log(usermetaData, error);
+  //   // } catch (error) {
+  //   //   setMessage(error.message);
+  //   //   console.error("login error", error);
+  //   // }
+  // };
 
   const signInWithGoogle = async (e) => {
     e.preventDefault();
@@ -123,7 +166,7 @@ export default function Home() {
 
   return (
     <>
-      {!checkIfRoleExits && (
+      {/* {!checkIfRoleExits && (
         <form onSubmit={handleSubmitRole}>
           <h3 className="text-2xl">Please complete your profile</h3>
           <div className="my-5">
@@ -160,9 +203,9 @@ export default function Home() {
             Confirm
           </button>
         </form>
-      )}
+      )} */}
 
-      {checkIfRoleExits && (
+      {/* {checkIfRoleExits && ( */}
         <form
           className="max-w-lg mx-auto w-full"
           onSubmit={handleSubmit(onSubmit)}
@@ -220,7 +263,7 @@ export default function Home() {
             <Image src={google} alt="" className="w-5 h5" /> <span>Google</span>
           </button>
         </form>
-      )}
+      {/* )} */}
     </>
   );
 }

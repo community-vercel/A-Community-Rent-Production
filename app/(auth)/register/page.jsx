@@ -9,7 +9,8 @@ import {
 } from "@heroicons/react/16/solid";
 import Link from "next/link";
 import Message from "@/components/Message";
-
+import { ToastContainer, toast } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { RegisterZod } from "@/zod/RegisterZod";
@@ -43,19 +44,25 @@ export default function Home() {
 
 
   useEffect(() => {
-    if (data.ErrorCode === 0) {
-      // Set the user details in the Redux store
-      // dispatch(setUser({ user: data.user }));
-      // dispatch(setSession({ session: data.session }));
-      // dispatch(setIsAuthenticated({ isAuthenticated: true }));
-      // dispatch(setUserMeta({ user_meta: usermetaData }));
-      setMessage('Registration successful. Please check your email to confirm your account.');
-       router.push("/");
-  } else {
-      setMessage(data.ErrorMsg || 'Registration failed. Please try again.');
-  }
-  }, [data.ErrorCode]);
+    if(data){
+      if (data.ErrorCode === 0) {
+        // Set the user details in the Redux store
+        // dispatch(setUser({ user: data.user }));
+        // dispatch(setSession({ session: data.session }));
+        // dispatch(setIsAuthenticated({ isAuthenticated: true }));
+        // dispatch(setUserMeta({ user_meta: usermetaData }));
+        toast.success('Registration successful. Please check your email to confirm your account.', { position: "top-right" }); // Show success toast
+
+        setMessage('Registration successful. Please check your email to confirm your account.');
+         router.push("/");
+    } else {
+        setMessage(data.ErrorMsg || 'Registration failed. Please try again.');
+    }
+    }
+   
+  }, [data?data.ErrorCode:[]]);
  
+  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
 
   const onSubmit = async (formData) => {
     setMessage('')
@@ -70,23 +77,25 @@ export default function Home() {
     };
 
       // Call postApi directly
-      await postApi('http://127.0.0.1:8000/registerUser', requestBody);
+      await postApi(`${serverurl}registerUser`, requestBody);
       console.log("Registration successful", data.ErrorCode,);
-   if (data.ErrorCode === 0) {
-            // Set the user details in the Redux store
-            // dispatch(setUser({ user: data.user }));
-            // dispatch(setSession({ session: data.session }));
-            // dispatch(setIsAuthenticated({ isAuthenticated: true }));
-            // dispatch(setUserMeta({ user_meta: usermetaData }));
-            setMessage('Registration successful. Please check your email to confirm your account.');
-             router.push("/");
-        } else {
-            setMessage(data.ErrorMsg || 'Registration failed. Please try again.');
-        }
+  //  if (data.ErrorCode === 0) {
+  //           // Set the user details in the Redux store
+  //           // dispatch(setUser({ user: data.user }));
+  //           // dispatch(setSession({ session: data.session }));
+  //           // dispatch(setIsAuthenticated({ isAuthenticated: true }));
+  //           // dispatch(setUserMeta({ user_meta: usermetaData }));
+  //           setMessage('Registration successful. Please check your email to confirm your account.');
+  //            router.push("/");
+  //       } else {
+  //           setMessage(data.ErrorMsg || 'Registration failed. Please try again.');
+  //       }
       // If needed, you can dispatch actions or navigate here
       
 
     } catch (error) {
+      toast.error(error.message || "An error occurred", { position: "top-right" }); // Show error toast
+
       setMessage(error.message);
       console.error("Registration error", error);
     }

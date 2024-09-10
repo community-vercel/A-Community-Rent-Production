@@ -13,6 +13,8 @@ import { AddCategoryZod } from "@/zod/AddCategoryZod";
 import useAuth from "@/hooks/useAuth";
 import uploadImage from "@/utils/uploadImage";
 import Image from "next/image";
+import { ToastContainer, toast } from "react-toastify";
+  import 'react-toastify/dist/ReactToastify.css';
 import { extractImagePath } from "@/utils/extractImagePath";
 
 const Page = () => {
@@ -26,24 +28,36 @@ const Page = () => {
   const [thumbnailDB, setThumbnailDB] = useState(null);
   const [cover, setCover] = useState(null);
   const [coverDB, setCoverDB] = useState(null);
+  console.log("data from aoi",coverDB,thumbnailDB)
+  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
 
   useEffect(() => {
-    if (auth && !auth.user?.id) router.push("/");
+    // if (auth && !auth.user?.id) router.push("/");
 
     // function to fill the form data from data base
     const getData = async () => {
       try {
         // get all current buiness categories
-        const { data, error } = await supabase
-          .from("category")
-          .select(`*`)
-          .eq("id", params.id)
-          .single();
-        if (error) throw error;
-        setValue("category", data.name);
-        setThumbnailDB(data.thumbnail);
-        setCoverDB(data.cover); 
+        const requestBody = JSON.stringify({ category_id: params.id });
+
+        const response = await fetch(`${serverurl}get-category/`, {
+          method: 'POST', // Use POST method
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: requestBody, // Send request body as JSON
+        });
+
+        const result = await response.json();
+        console.log("data from aoi",result)
+        console.log("data from aoi",result.data.name)
+
+        if (response.ok) {
+        setValue("category", result.data.name);
+        setThumbnailDB(result.data.thumbnail);
+        setCoverDB(result.data.cover); 
         setLoading(false);
+        }
       } catch (error) {
         console.log(error);
       }
@@ -64,70 +78,46 @@ const Page = () => {
 
   const onSubmit = async (formData) => {
     setMessage("");
-    try { 
-
-      const { error: catError } = await supabase
-        .from("category")
-        .update({'name':formData.category})
-        .eq("id", params.id);
-      if (catError) throw catError;
- 
-      if(cover){
-        const oldCoverUrl = extractImagePath(coverDB).replace("category/", "");
-
-        const { data: oldCoverRemoveData, error: oldCoverRemoveError } =
-          await supabase.storage.from("category").remove([oldCoverUrl]);
-        if (oldCoverRemoveError) throw oldCoverRemoveError;
-        console.log(oldCoverRemoveData)
-
-        //  upload cover
-        const uploadBusinessCover = await uploadImage(
-          params.id,
-          cover,
-          "category",
-          `category-images/`
-        );
-        if (uploadBusinessCover.error) throw uploadBusinessCover.error;
-
-        const { data: updateLogoData, error: updateLogoError } = await supabase
-          .from("category")
-          .update({ cover: uploadBusinessCover[0].url })
-          .eq("id", params.id)
-          .select();
+    
+    try {
+      // Create a new FormData object to handle file uploads
+      const formDat = new FormData();
+      
+      formDat.append("category_id", params.id);
+      formDat.append("name", formData.category ? formData.category : category?.name);
+      
+      // Check if the thumbnail is newly uploaded or use the existing one from the database
+      if (thumbnail && thumbnail[0]) {
+        formDat.append("thumbnail", thumbnail[0]);
+      } else if (thumbnailDB) {
+        formDat.append("thumbnail", thumbnailDB);  // Or handle this in a way suitable to your backend if it requires a URL string or a file.
       }
-
-      if(thumbnail){
-        const oldThumbUrl = extractImagePath(thumbnailDB).replace("category/", "");
-
-        const { data: oldThumbRemoveData, error: oldThumbRemoveError } =
-          await supabase.storage.from("category").remove([oldThumbUrl]);
-        if (oldThumbRemoveError) throw oldThumbRemoveError;
-        console.log(oldThumbRemoveData)
-
-        //  upload Thumb
-        const uploadBusinessThumb = await uploadImage(
-          params.id,
-          thumbnail,
-          "category",
-          `category-images/`
-        );
-        if (uploadBusinessThumb.error) throw uploadBusinessThumb.error;
-
-        const { data: updateThumbData, error: updateThumbError } = await supabase
-          .from("category")
-          .update({ thumbnail: uploadBusinessThumb[0].url })
-          .eq("id", params.id)
-          .select();
+  
+      // Check if the cover is newly uploaded or use the existing one from the database
+      if (cover && cover[0]) {
+        formDat.append("cover", cover[0]);
+      } else if (coverDB) {
+        formDat.append("cover", coverDB);
       }
- 
-      setMessage("Updated Successfully");
-      router.push('/dashboard/categories')
+      
+      const response = await fetch(`${serverurl}update-category/`, {
+        method: 'POST', 
+        body: formDat, 
+      });
+  
+      const result = await response.json();
+  
+      if (response.ok) {
+        setMessage("Category updated successfully!");
+        router.push('/dashboard/categories');
+      } else {
+        setMessage(result.error || "Failed to update category");
+      }
     } catch (error) {
-      if (error.message.includes("duplicate"))
-        return setMessage("Category already exists!");
-      setMessage(error.message);
+      setMessage("An unexpected error occurred: " + error.message);
     }
   };
+  
 
   return (
     <>
@@ -161,9 +151,9 @@ const Page = () => {
               {thumbnailDB && (
                 <div className="flex gap-4 items-center">
                   <span>Current Thumbnail:</span>
-                  <Image
-                    src={thumbnailDB}
-                    alt=""
+                  <Image src={`${serverurl}media/${thumbnailDB}`}
+                  
+                      alt=""
                     className="aspect-square my-4 rounded-sm  bg-white d-flex p-1"
                     width={180}
                     height={180}
@@ -184,14 +174,16 @@ const Page = () => {
               />
               {coverDB && (
                 <div className="flex gap-4 items-center">
+                <div className="flex gap-4 items-center">
                   <span>Current Cover:</span>
                   <Image
-                    src={coverDB}
-                    alt=""
+ src={`${serverurl}media/${coverDB}`}                    
+  alt=""
                     className="aspect-square my-4 rounded-sm  bg-white d-flex p-1"
                     width={180}
                     height={180}
                   />
+                  </div>
                 </div>
               )}
             </div>

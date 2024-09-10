@@ -28,7 +28,7 @@ function useGetApi(url) {
 
     fetchData();
   }, [url]);
-
+console.log("my data",data)
   return { data, loading, error };
 }
 

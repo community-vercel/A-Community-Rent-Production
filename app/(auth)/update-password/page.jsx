@@ -3,62 +3,87 @@
 import Formlabel from "@/components/Formlabel";
 import InputField from "@/components/InputField";
 import { LockClosedIcon } from "@heroicons/react/16/solid";
-import Link from "next/link";
 import Message from "@/components/Message";
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { UpdatePasswordZod } from "@/zod/UpdatePasswordZod";
-
-import { supabase } from "@/lib/supabase";
-import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
-import { setIsAuthenticated, setSession, setUser, setUserMeta } from "@/store/slices/authslice";
+import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
+import usePostApi from "@/hooks/usePostApis";
+// import { useRouter } from 'next/router';
 
+
+const getQueryParamsFromHref = () => {
+  const params = new URLSearchParams(window.location.search);
+  const uid = params.get('uid');
+  const token = params.get('token');
+  return { uid, token };
+};
 export default function Home() {
-    const router = useRouter();
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setError,
-  } = useForm({
+  const router = useRouter();
+  const { register, handleSubmit, formState: { errors }, setError, reset } = useForm({
     resolver: zodResolver(UpdatePasswordZod),
   });
 
   const [message, setMessage] = useState(null);
-  const dispatch = useDispatch();
-  const user = useSelector((state) => state.auth.user); 
+  // const { uid, token } = router.query;
+  const [uid, setUid] = useState(null);
+  const [token, setToken] = useState(null);
 
   useEffect(() => {
-    if (user.id) {
-      router.push("/");
-    }
+    const { uid, token } = getQueryParamsFromHref();
+    setUid(uid || '');
+    setToken(token || '');
+    console.log("uid", uid, token);
   }, []);
 
+  const serverurl = process.env.NEXT_PUBLIC_DJANGO_URL;
+  const { data, loading, error, postApi } = usePostApi();
+
+  // useEffect(() => {
+  //   if (router.isReady) {
+  //     const { uid, token } = router.query;
+  //     setUid(uid || '');
+  //     setToken(token || '');
+  //     console.log("uid",uid,token)
+      
+  //   }
+  // }, [router.isReady, router.query]);
+
+  // useEffect(() => {
+  //   // Redirect to home if user is already authenticated
+  //   if (user?.id) {
+  //     router.push("/");
+  //   }
+  // }, [user, router]);
+
   const onSubmit = async (formData) => { 
+    console.log("uid",uid,token)
+
+    if (formData.password !== formData.confirmPassword) {
+      setMessage("Password not matched");
+      toast.error('Password not matched.', { position: "top-right" });
+      return;
+    }
+
     try {
-      const { data, error } = await supabase.auth.updateUser({
-        password: formData.password,
-      });
-      if (error) throw error;
-      console.log("Update Password successful", data);
-      dispatch(setUser({ user: data.user }));
-      dispatch(setSession({ session: data.session }));
+      const requestBody = {
+        newpassword: formData.password,
+        uid: uid,
+        token: token,
+      };
 
-      const { data: usermetaData, error:errorUserMeta } = await supabase
-        .from("user_meta")
-        .select("*")
-        .eq("user_id", data.user.id)
-        .single();
-      if (usermetaData && usermetaData.id) {
-        dispatch(setUserMeta({ user_meta: usermetaData }));
-        dispatch(setIsAuthenticated({ isAuthenticated: true }));
-        router.push("/");
+      await postApi(`${serverurl}confirm-reset/`, requestBody);
+
+      if (data?.ErrorCode === 0) {
+        toast.success('Password reset Successful.', { position: "top-right" });
+        reset(); // Clear the form fields after success
+        setMessage('Password reset Successful.');
+        router.push("/login")
+      } else {
+        setMessage(data?.ErrorMsg || 'Failed. Please try again.');
       }
-
-
     } catch (error) {
       setMessage(error.message);
       console.error("Update Password error", error);

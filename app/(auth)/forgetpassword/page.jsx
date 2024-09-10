@@ -10,6 +10,10 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ForgetPasswordZod } from "@/zod/ForgetPasswordZod";
+import usePostApi from "@/hooks/usePostApis";
+import { ToastContainer, toast } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
+
 
 import { supabase } from "@/lib/supabase";
 import { useState } from "react";
@@ -20,26 +24,37 @@ const Page = () => {
     handleSubmit,
     formState: { errors },
     setError,
+    reset,
   } = useForm({
     resolver: zodResolver(ForgetPasswordZod),
   });
   const [message, setMessage] = useState(
-    "Please enter your username or email address. You will receive an email message with instructions on how to reset your password. "
+    "Please enter your  email address. You will receive an email message with instructions on how to reset your password. "
   );
- 
+  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
+  const { data, loading, error, postApi } = usePostApi();
+
   const onSubmit = async (formData) => {
     console.log(formData,`${process.env.NEXT_PUBLIC_SITE_URL}update-password`);
     try {
-      const { data, error } = await supabase.auth.resetPasswordForEmail(
-        formData.email,
-        {
-          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}update-password`,
-        }
-      );
-      if (error) throw error;
-      setMessage('Please check your email');
-      console.log("Forget Password successful", data);
-    } catch (error) {
+      
+    const requestBody = {
+      email: formData.email,
+    };
+
+      await postApi(`${serverurl}password-reset/`, requestBody);
+
+       if (data.ErrorCode === 0) {
+        toast.success('Password reset Instruction send to your email. Please check your email to reset your password.', { position: "top-right" }); // Show success toast
+
+        reset();  // Clear the email field after success
+  
+        setMessage('Password reset Instruction send to your email. Please check your email to reset your password.');
+            } else {
+                setMessage(data.ErrorMsg || 'Registration failed. Please try again.');
+            }
+          }
+   catch (error) {
       setMessage(error.message);
       console.error("Forget Password error", error);
     }

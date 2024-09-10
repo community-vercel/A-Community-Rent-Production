@@ -32,31 +32,45 @@ const Page = () => {
 
   const [showReviewForm, setShowReviewForm] = useState(false);
   const params = useParams();
+  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
 
   const { user, user_meta } = useSelector((state) => state.auth);
+  console.log("USER",user,user_meta)
   const router = useRouter();
-
   useEffect(() => {
     async function fetchBusinessDetails() {
+      console.log("checking")
       try {
         setLoading(true);
+  
+        // Fetch business details from Django API
+        const businessId = params.id;
+    
+        const formData={
+          id:businessId,
+          user_id:user.id,
+          user_role:user_meta.role
+        }
+        // Fetch business details, categories, and tags from the Django API
+        const response = await fetch(`${serverurl}get-specifibusiness/`, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          method: 'POST',
+          body: JSON.stringify(formData),
+      });
+        const result = await response.json();
+        console.log("checking",result)
 
-        // Fetch business details
-        const { data, error } = await supabase
-          .from("business")
-          .select("*")
-          .eq("id", params.id)
-          .single();
-
-        if (error) throw error;
-
-        if (data.approved !== "1" && user && data.user_id == user.id) {
+        if (result.ErrorCode !== 0) {
+          throw new Error(result.ErrorMsg);
+        }
+  
+        const data = result.data;
+  
+        if (data.approved !== "1" && user && data.user_id === user.id) {
           console.log("not approved but owner");
-        } else if (
-          data.approved !== "1" &&
-          user &&
-          user_meta.role === "super_admin"
-        ) {
+        } else if (data.approved !== "1" && user && user_meta.role === "super_admin") {
           console.log("system owner");
         } else if (data.approved !== "1") {
           console.log("not approved");
@@ -64,62 +78,126 @@ const Page = () => {
         } else {
           console.log("approved");
         }
-
+  
         setBusiness(data);
-        console.log(data);
         setStatus(data.approved);
-
-        if (user.id) {
-          const { data: haveData, error: haveError } = await supabase
-            .from("favorite")
-            .select("*")
-            .eq("user_id", user.id)
-            .eq("business_id", data.id)
-            .single();
-
-          if (haveData && haveData.id) {
-            setIsFavorite(!isFavorite);
-          }
-        }
-
+  
+        // Check if the business is favorited by the user
+        // if (user.id) {
+        //   const favoriteResponse = await fetch(`/api/favorites/?user_id=${user.id}&business_id=${data.id}`);
+        //   const favoriteResult = await favoriteResponse.json();
+  
+        //   if (favoriteResult.data && favoriteResult.data.id) {
+        //     setIsFavorite(true);
+        //   }
+        // }
+  
         setLoading(false);
-
-        const { data: categoryBusinessData, error: categoryBusinessError } =
-          await supabase
-            .from("category_business")
-            .select("category(id,name)")
-            .eq("business_id", params.id);
-
-        if (categoryBusinessError) throw categoryBusinessError;
-        setCategories(categoryBusinessData);
-
-        const { data: reviewsBusinessData, error: reviewsBusinessError } =
-          await supabase
-            .from("reviews")
-            .select("*")
-            .eq("business_id", params.id)
-            .eq("status", "1")
-            .eq("isArchived", false);
-
-        if (reviewsBusinessError) throw reviewsBusinessError;
-        setReviews(reviewsBusinessData);
-        console.log(reviewsBusinessData);
-
-        const { data: statsData, error: statsError } = await supabase.rpc(
-          "get_rating_stats",
-          { business_id_param: params.id }
-        );
-
-        if (statsError) throw statsError;
-        console.log(statsData);
-        setStats(statsData);
+  
+        // Set categories
+        setCategories(data.categories);
+  
+        // Set reviews
+        setReviews(data.reviews);
+        console.log(data.reviews);
+  
+        // Set stats
+        setStats(data.stats);
+        console.log(data.stats);
+  
       } catch (error) {
         console.log(error.message);
+        setLoading(false);
       }
     }
-
+  
     fetchBusinessDetails();
-  }, [params.id, user]);
+  }, [params.id, user, user_meta.role]);
+  
+  // useEffect(() => {
+  //   async function fetchBusinessDetails() {
+  //     try {
+  //       setLoading(true);
+
+  //       // Fetch business details
+  //       const { data, error } = await supabase
+  //         .from("business")
+  //         .select("*")
+  //         .eq("id", params.id)
+  //         .single();
+
+  //       if (error) throw error;
+
+  //       if (data.approved !== "1" && user && data.user_id == user.id) {
+  //         console.log("not approved but owner");
+  //       } else if (
+  //         data.approved !== "1" &&
+  //         user &&
+  //         user_meta.role === "super_admin"
+  //       ) {
+  //         console.log("system owner");
+  //       } else if (data.approved !== "1") {
+  //         console.log("not approved");
+  //         router.push("/");
+  //       } else {
+  //         console.log("approved");
+  //       }
+
+  //       setBusiness(data);
+  //       console.log(data);
+  //       setStatus(data.approved);
+
+  //       if (user.id) {
+  //         const { data: haveData, error: haveError } = await supabase
+  //           .from("favorite")
+  //           .select("*")
+  //           .eq("user_id", user.id)
+  //           .eq("business_id", data.id)
+  //           .single();
+
+  //         if (haveData && haveData.id) {
+  //           setIsFavorite(!isFavorite);
+  //         }
+  //       }
+
+  //       setLoading(false);
+
+  //       const { data: categoryBusinessData, error: categoryBusinessError } =
+  //         await supabase
+  //           .from("category_business")
+  //           .select("category(id,name)")
+  //           .eq("business_id", params.id);
+
+  //       if (categoryBusinessError) throw categoryBusinessError;
+  //       setCategories(categoryBusinessData);
+
+  //       const { data: reviewsBusinessData, error: reviewsBusinessError } =
+  //         await supabase
+  //           .from("reviews")
+  //           .select("*")
+  //           .eq("business_id", params.id)
+  //           .eq("status", "1")
+  //           .eq("isArchived", false);
+
+  //       if (reviewsBusinessError) throw reviewsBusinessError;
+  //       setReviews(reviewsBusinessData);
+  //       console.log(reviewsBusinessData);
+
+  //       const { data: statsData, error: statsError } = await supabase.rpc(
+  //         "get_rating_stats",
+  //         { business_id_param: params.id }
+  //       );
+
+  //       if (statsError) throw statsError;
+  //       console.log(statsData);
+  //       setStats(statsData);
+  //     } catch (error) {
+  //       console.log(error.message);
+  //     }
+  //   }
+
+  //   fetchBusinessDetails();
+  // }, [params.id, user]);
 
   // status change dropdown code
   const [status, setStatus] = useState("0");
@@ -253,9 +331,12 @@ const Page = () => {
             )}
 
             <ListTopBanner
-              img={business.images ? business.images.split(",")[0] : inner}
+             img={business.images && business.images.length > 0 
+              ? `${serverurl}media/${business.images[0]}` 
+              : inner} 
+              // img={business.images ?`${serverurl}+'media/'`+ business.images.split(",")[0] : inner}
               heading={business.name}
-              label={categories.length && categories[0].category.name}
+              label={business.categories.length && business.categories[0].category__name}
               website={business.website}
               call={business.phone}
               direction=""
@@ -384,8 +465,29 @@ const Page = () => {
                   )}
                 </div>
               )}
+{business.images && business.images.length > 1 && (
+  <div className="bg-white mb-8 rounded-3xl">
+    <Swiper
+      pagination={{ clickable: true }}
+      modules={[Pagination]}
+      className="swipperMain w-full max-w-80 md:max-w-xl "
+    >
+      {business.images.map((img, index) => (
+        <SwiperSlide key={index}>
+          <Image
+            src={`${serverurl}media/${img}`}
+            className="flex rounded-md !w-full"
+            width={1000}
+            height={1000}
+            alt={`Image ${index + 1}`}
+          />
+        </SwiperSlide>
+      ))}
+    </Swiper>
+  </div>
+)}
 
-              {business.images && business.images.split(",").length > 1 && (
+              {/* {business.images && business.images.split(",").length > 1 && (
                 <div className="bg-white mb-8 rounded-3xl">
                   <Swiper
                     pagination={{ clickable: true }}
@@ -397,7 +499,7 @@ const Page = () => {
                         {img && (
                           <SwiperSlide key={index}>
                             <Image
-                              src={img}
+                              src={`${serverurl}+'media'`+img}
                               className="flex rounded-md !w-full"
                               width={1000}
                               height={1000}
@@ -409,7 +511,7 @@ const Page = () => {
                     ))}
                   </Swiper>
                 </div>
-              )}
+              )} */}
 
               <div className="bg-white p-8 rounded-3xl">
                 <h3 className="text-xl font-bold mb-3 text-text-color">
@@ -424,13 +526,13 @@ const Page = () => {
                 <p className="text-sm leading-6 mt-3">
                   <strong className="uppercase">Categories</strong>
                   <br />
-                  {categories.map((item, index) => (
+                  {business.categories.map((item, index) => (
                     <Link
-                      href={`/places/category/${item.category.id}`}
-                      key={item.category.id}
+                      href={`/places/category/${item.category__id}`}
+                      key={item.category__id}
                     >
-                      <span href={`/places/category/${item.category.id}`}>
-                        {item.category.name}
+                      <span href={`/places/category/${item.category__id}`}>
+                        {item.category__name}
                       </span>
                       {index < categories.length - 1 && ", "}
                     </Link>
@@ -479,7 +581,7 @@ const Page = () => {
                 )}
               </div>
 
-              {reviews.length > 0 && (
+              {reviews?reviews.length > 0 && (
                 <div className="bg-white p-8 rounded-3xl mt-7">
                   <div className="flex justify-between flex-wrap gap-3 items-center">
                     <h3 className="text-xl font-bold mb-3 text-text-color">
@@ -536,7 +638,7 @@ const Page = () => {
                     })}
                   </div>
                 </div>
-              )}
+              ):[]}
 
               <div className="bg-white mt-7 p-8 rounded-3xl">
                 <iframe
