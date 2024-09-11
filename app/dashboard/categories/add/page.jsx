@@ -19,7 +19,7 @@ const Page = () => {
   const auth = useAuth();
   const [message, setMessage] = useState(null);
   const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
-
+console.log("Auth",auth)
   if (auth && !auth.user?.id) router.push("/");
 
   const [thumbnail, setThumbnail] = useState(null);
@@ -43,6 +43,7 @@ const Page = () => {
 
       // Create FormData object to send data and files
       const form = new FormData();
+      form.append("userid",auth.user?.id)
       form.append("category", formData.category);
       form.append("thumbnail", thumbnail[0]); // assuming single file
       form.append("cover", cover[0]); // assuming single file

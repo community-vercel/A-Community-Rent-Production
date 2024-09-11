@@ -55,7 +55,7 @@ const Sidebar = ({ openDrawer, setOpenDrawer }) => {
           openDrawer && "!opacity-100"
         }`}
       >
-        {auth.user && auth.user_meta.role == "super_admin" && (
+        {auth.user && auth.user_meta.role == "1" && (
           <>
             <Link
               href="/favorite"
@@ -172,7 +172,7 @@ const Sidebar = ({ openDrawer, setOpenDrawer }) => {
           </>
         )}
 
-        {auth.user && auth.user_meta.role == "business" && (
+        {auth.user && auth.user_meta.role == "3" && (
           <>
             <Link
               href="/favorite"
@@ -255,8 +255,8 @@ const Sidebar = ({ openDrawer, setOpenDrawer }) => {
         )}
 
         {auth.user &&
-          auth.user_meta.role != "business" &&
-          auth.user_meta.role != "super_admin" && (
+          auth.user_meta.role != "3" &&
+          auth.user_meta.role != "1" && (
             <>
               <Link
                 href="/favorite"

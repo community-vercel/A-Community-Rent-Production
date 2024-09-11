@@ -27,6 +27,7 @@ const Page = () => {
   const [categories, setCategories] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [stats, setStats] = useState({});
+  console.log("Status",stats)
   const [isFavorite, setIsFavorite] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -35,7 +36,8 @@ const Page = () => {
   const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
 
   const { user, user_meta } = useSelector((state) => state.auth);
-  console.log("USER",user,user_meta)
+
+  console.log("USER",user_meta)
   const router = useRouter();
   useEffect(() => {
     async function fetchBusinessDetails() {
@@ -67,12 +69,12 @@ const Page = () => {
         }
   
         const data = result.data;
-  
-        if (data.approved !== "1" && user && data.user_id === user.id) {
+  console.log("data is",data)
+        if (data.approved !== 1 || data.approved !== "1" && user && data.user_id === user.id) {
           console.log("not approved but owner");
-        } else if (data.approved !== "1" && user && user_meta.role === "super_admin") {
+        } else if (data.approved !== 1 || data.approved !== "1" && user && user_meta.role ===1) {
           console.log("system owner");
-        } else if (data.approved !== "1") {
+        } else if (data.approved !== 1 || data.approved !== "1 " ) {
           console.log("not approved");
           router.push("/");
         } else {
@@ -81,6 +83,7 @@ const Page = () => {
   
         setBusiness(data);
         setStatus(data.approved);
+        
   
         // Check if the business is favorited by the user
         // if (user.id) {
@@ -102,8 +105,8 @@ const Page = () => {
         console.log(data.reviews);
   
         // Set stats
-        setStats(data.stats);
-        console.log(data.stats);
+        setStats(data.statistics);
+        console.log(data.statistics);
   
       } catch (error) {
         console.log(error.message);
@@ -214,30 +217,62 @@ const Page = () => {
   const handleStatusChange = async (e) => {
     console.log(e.target.value);
     try {
-      const { error } = await supabase
-        .from("business")
-        .update({ approved: e.target.value })
-        .eq("id", business.id);
-      if (error) throw error;
+      const formdata={
+        approved:e.target.value,
+        id:business.id
+      }
+      const response = await fetch(`${serverurl}update-business-status/`,
+        {
+          headers :{ 'Content-Type': 'application/json' },
+          method: 'POST',
+          body: JSON.stringify(formdata),
+     
+
+      });
+      const result = await response.json();
+      if (response.ok) {
+      } else {
+        // setError(result.error || 'Failed to fetch status');
+      }
     } catch (error) {
-      console.log(error);
+      // setError('An unexpected error occurred');
+    } finally {
+      setLoading(false);
     }
+    // try {
+    //   const { error } = await supabase
+    //     .from("business")
+    //     .update({ approved: e.target.value })
+    //     .eq("id", business.id);
+    //   if (error) throw error;
+    // } catch (error) {
+    //   console.log(error);
+    // }
   };
 
   // delete
+  
   const handleDelete = async () => {
     try {
-      const { error } = await supabase
-        .from("business")
-        .update({ isArchived: true })
-        .eq("id", business.id);
-      if (error) throw error;
-      router.push("/");
+      const response = await fetch(`${serverurl}archive-business/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: business.id }),
+      });
+  
+      const result = await response.json();
+      if (response.ok) {
+        router.push("/");
+      } else {
+        console.error(result.ErrorMsg || 'Failed to archive business');
+      }
     } catch (error) {
-      console.log(error);
+      console.error('An unexpected error occurred:', error);
     }
   };
-
+  
   // favroite
   const toggleFavorite = async () => {
     try {
@@ -275,7 +310,7 @@ const Page = () => {
       ) : (
         <div>
           <div className="relative">
-            {(user_meta.role === "super_admin" ||
+            {(user_meta.role === 1 ||
               user.id == business.user_id) && (
               <div className="fixed z-10 right-5 top-[130px] flex gap-2 flex-wrap">
                 <button
@@ -293,7 +328,7 @@ const Page = () => {
                   <PencilIcon className="w-5 h-5" />
                 </Link>
 
-                {user_meta.role === "super_admin" && (
+                {user_meta.role === 1 && (
                   <div className="relative inline-block cursor-pointer">
                     <select
                       value={status}
@@ -588,15 +623,15 @@ const Page = () => {
                       Customer Reviews
                     </h3>
                     <div className="flex justify-end flex-col">
-                      <StarRating rating={stats[0]?.avg_rating} />
+                      <StarRating rating={stats?.avg_rating} />
                       <h5 className="">
                         Rating{" "}
                         <span className="font-bold text-2xl">
-                          {stats[0]?.avg_rating.toFixed(1)}
+                          {stats?.avg_rating.toFixed(1)}
                         </span>
                         <span className="font-bold text-sm">/5.0</span> from{" "}
                         <span className="font-bold text-2xl">
-                          {stats[0]?.total_count}
+                          {stats?.total_count}
                         </span>{" "}
                         review(s)
                       </h5>
@@ -621,7 +656,7 @@ const Page = () => {
                                     <>
                                       {img && (
                                         <Image
-                                          src={img}
+                                          src={`${serverurl}`+img}
                                           alt=""
                                           key={i}
                                           width={200}

@@ -27,17 +27,17 @@ const Page = () => {
       name: "Business",
       selector: (row) => (
         <Link
-          href={`/places/category/business/${row.business.id}`}
+          href={`/places/category/business/${row.business__id}`}
           className="underline"
         >
-          {row.business.name}
+          {row.business__name}
         </Link>
       ),
       sortable: true,
     },
     {
       name: "User",
-      selector: (row) => row.user_email,
+      selector: (row) => row.email,
       sortable: true,
     },
     {
@@ -76,27 +76,22 @@ const Page = () => {
   );
 
   useEffect(() => {
-    if (!user && user_meta.role !== "super_admin") router.push("/");
+    if (!user && user_meta.role !== "1" || user_meta.role !== 1) router.push("/");
     getReviews();
   }, []);
 
   useEffect(() => {
-    if (!user && user_meta.role !== "super_admin") router.push("/"); 
+    if (!user && user_meta.role !== "1" || user_meta.role !== 1) router.push("/"); 
   }, [user]);
 
+  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
 
   const getReviews = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.from("reviews").select(`
-          *,
-          business (
-              id,
-              name
-          ) 
-      `).eq("isArchived", false);
-      if (error) throw error;
-      setReviews(data); 
+      const response = await fetch(`${serverurl}get-reviews/`);
+      const result = await response.json();
+      setReviews(result.data); 
     } catch (error) {
       console.log(error);
     } finally {
@@ -104,8 +99,9 @@ const Page = () => {
     }
   };
 
+
   useEffect(() => {
-    if (user_meta.role !== "super_admin") router.push("/");
+    if ( user_meta.role !== 1) router.push("/");
   }, [user_meta]);
 
 
@@ -114,60 +110,129 @@ const Page = () => {
     console.log(selectedRows);
     setSelectedRows(selectedRows);
   };
-
-  // select status change
   const selectStatus = async (e) => {
     try {
       console.log(e.target.value);
-      let upddateArray = [];
+      let updateArray = [];
       if (e.target.value === "approve") {
-        upddateArray = selectedRowsState.map((row) => {
-          return { id: row.id, status: "1" };
-        });
+        updateArray = selectedRowsState.map((row) => ({
+          id: row.id,
+          status: "1",
+        }));
+      } else if (e.target.value === "pending") {
+        updateArray = selectedRowsState.map((row) => ({
+          id: row.id,
+          status: "0",
+        }));
+      } else if (e.target.value === "reject") {
+        updateArray = selectedRowsState.map((row) => ({
+          id: row.id,
+          status: "2",
+        }));
+      } else if (e.target.value === "delete") {
+        updateArray = selectedRowsState.map((row) => ({
+          id: row.id,
+          isArchived: true,
+        }));
       }
-      if (e.target.value === "pending") {
-        upddateArray = selectedRowsState.map((row) => {
-          return { id: row.id, status: "0" };
+  
+      if (updateArray.length > 0) {
+        console.log(updateArray);
+  
+        const response = await fetch(`${serverurl}update-reviews/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updateArray),
         });
-      }
-      if (e.target.value === "reject") {
-        upddateArray = selectedRowsState.map((row) => {
-          return { id: row.id, status: "2" };
-        });
-      }
-      if (e.target.value === "delete") {
-        upddateArray = selectedRowsState.map((row) => {
-          return { id: row.id, isArchived: true };
-        });
-      }
-
-      if (upddateArray.length > 0) {
-        console.log(upddateArray);
-
-        const { data, error } = await supabase
-          .from("reviews")
-          .upsert(upddateArray)
-          .select();
-
-        if(error) throw error
-        getReviews()
-        setToggleClearRows(!toggledClearRows)
-        toast.success('Updated', {
-          position: "bottom-center",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: false,
-          draggable: false,
-          progress: undefined,
-          theme: "light",
-          transition: Bounce,
+  
+        const result = await response.json();
+        if (response.ok) {
+          getReviews();
+          setToggleClearRows(!toggledClearRows);
+          toast.success('Updated', {
+            position: "bottom-center",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: false,
+            draggable: false,
+            progress: undefined,
+            theme: "light",
+            transition: Bounce,
           });
+        } else {
+          toast.error(result.ErrorMsg || 'Failed to update reviews', {
+            position: "bottom-center",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: false,
+            draggable: false,
+            progress: undefined,
+            theme: "light",
+          });
+        }
       }
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
   };
+  
+  // select status change
+  // const selectStatus = async (e) => {
+  //   try {
+  //     console.log(e.target.value);
+  //     let upddateArray = [];
+  //     if (e.target.value === "approve") {
+  //       upddateArray = selectedRowsState.map((row) => {
+  //         return { id: row.id, status: "1" };
+  //       });
+  //     }
+  //     if (e.target.value === "pending") {
+  //       upddateArray = selectedRowsState.map((row) => {
+  //         return { id: row.id, status: "0" };
+  //       });
+  //     }
+  //     if (e.target.value === "reject") {
+  //       upddateArray = selectedRowsState.map((row) => {
+  //         return { id: row.id, status: "2" };
+  //       });
+  //     }
+  //     if (e.target.value === "delete") {
+  //       upddateArray = selectedRowsState.map((row) => {
+  //         return { id: row.id, isArchived: true };
+  //       });
+  //     }
+
+  //     if (upddateArray.length > 0) {
+  //       console.log(upddateArray);
+
+  //       const { data, error } = await supabase
+  //         .from("reviews")
+  //         .upsert(upddateArray)
+  //         .select();
+
+  //       if(error) throw error
+  //       getReviews()
+  //       setToggleClearRows(!toggledClearRows)
+  //       toast.success('Updated', {
+  //         position: "bottom-center",
+  //         autoClose: 3000,
+  //         hideProgressBar: false,
+  //         closeOnClick: true,
+  //         pauseOnHover: false,
+  //         draggable: false,
+  //         progress: undefined,
+  //         theme: "light",
+  //         transition: Bounce,
+  //         });
+  //     }
+  //   } catch (error) {
+  //     console.log(error)
+  //   }
+  // };
 
   return (
     <>
@@ -188,7 +253,7 @@ const Page = () => {
                       <option className="cursor-pointer" value="none">
                         Actions
                       </option>
-                      {user_meta.role == 'super_admin' && (
+                      {user_meta.role == 1 && (
                         <>
                         <option className="cursor-pointer" value="approve">
                           Approve

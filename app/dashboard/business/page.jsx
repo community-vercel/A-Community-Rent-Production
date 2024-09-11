@@ -86,19 +86,36 @@ const [error,setError]=useState("")
   // useEffect(() => {
   //   if (!user && user_meta.role !== "super_admin") router.push("/"); 
   // }, [user]);
-
   useEffect(() => {
-    if (user && !user.id) router.push("/");
-
-    const  getBusinesses = async () => {
+    // Redirect if user is not defined or has no ID
+    if (!user || !user.id) {
+      router.push("/");
+      return;
+    }
+    getBusinesses();
+  }, []);
+    const getBusinesses = async () => {
       try {
-        const response = await fetch(`${serverurl}get-business/`);
+        let response;
+        const headers = { 'Content-Type': 'application/json' };
+        const url = user.role === '3'
+          ? `${serverurl}get-userbusiness/`
+          : `${serverurl}get-business/`;
+        
+        const options = {
+          method: user.role === '3' ? 'POST' : 'GET',
+          headers,
+          ...(user.role === '3' && { body: JSON.stringify({ user_id: user.id }) })
+        };
+
+        response = await fetch(url, options);
+        
         const result = await response.json();
+        
         if (response.ok) {
-          
-          setBusiness(result.data); 
-               } else {
-          setError(result.error || 'Failed to fetch busniess');
+          setBusiness(result.data);
+        } else {
+          setError(result.error || 'Failed to fetch businesses');
         }
       } catch (error) {
         setError('An unexpected error occurred');
@@ -107,9 +124,7 @@ const [error,setError]=useState("")
       }
     };
 
-    getBusinesses();
-   
-  }, []);
+ 
 
   // select selected rows
   const onSelectRowChange = ({ selectedRows }) => {
@@ -117,71 +132,154 @@ const [error,setError]=useState("")
     setSelectedRows(selectedRows);
   };
 
-  // select status change
+  
   const selectStatus = async (e) => {
     try {
       console.log(e.target.value);
-      let upddateArray = [];
+      let updateArray = [];
+      
       if (e.target.value === "approve") {
-        upddateArray = selectedRowsState.map((row) => {
-          return { id: row.id, approved: "1" };
-        });
+        updateArray = selectedRowsState.map((row) => ({
+          id: row.id,
+          approved: "1",
+        }));
+      } else if (e.target.value === "pending") {
+        updateArray = selectedRowsState.map((row) => ({
+          id: row.id,
+          approved: "0",
+        }));
+      } else if (e.target.value === "reject") {
+        updateArray = selectedRowsState.map((row) => ({
+          id: row.id,
+          approved: "2",
+        }));
+      } else if (e.target.value === "delete") {
+        updateArray = selectedRowsState.map((row) => ({
+          id: row.id,
+          isArchived: true,
+        }));
+      } else if (e.target.value === "featured") {
+        updateArray = selectedRowsState.map((row) => ({
+          id: row.id,
+          isFeatured: true,
+        }));
+      } else if (e.target.value === "unfeatured") {
+        updateArray = selectedRowsState.map((row) => ({
+          id: row.id,
+          isFeatured: false,
+        }));
       }
-      if (e.target.value === "pending") {
-        upddateArray = selectedRowsState.map((row) => {
-          return { id: row.id, approved: "0" };
+  
+      if (updateArray.length > 0) {
+        console.log(updateArray);
+  
+        const response = await fetch(`${serverurl}update-businesses/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updateArray),
         });
-      }
-      if (e.target.value === "reject") {
-        upddateArray = selectedRowsState.map((row) => {
-          return { id: row.id, approved: "2" };
-        });
-      }
-      if (e.target.value === "delete") {
-        upddateArray = selectedRowsState.map((row) => {
-          return { id: row.id, isArchived: true };
-        });
-      }
-
-      if (e.target.value === "featured") {
-        upddateArray = selectedRowsState.map((row) => {
-          return { id: row.id, isFeatured: true };
-        });
-      }
-
-      if (e.target.value === "unfeatured") {
-        upddateArray = selectedRowsState.map((row) => {
-          return { id: row.id, isFeatured: false };
-        });
-      }
-
-      if (upddateArray.length > 0) {
-        console.log(upddateArray);
-
-        const { data, error } = await supabase
-          .from("business")
-          .upsert(upddateArray)
-          .select();
-
-        if(error) throw error
-        getBusinesses()
-        setToggleClearRows(!toggledClearRows)
-        toast.success('Updated', {
-          position: "bottom-center",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: false,
-          draggable: false,
-          progress: undefined,
-          theme: "light",
-          transition: Bounce,
+  
+        const result = await response.json();
+        if (result.ErrorCode===0) {
+          console.log("New Log",result)
+          getBusinesses()
+          setToggleClearRows(!toggledClearRows)
+          toast.success('Updated', {
+            position: "bottom-center",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: false,
+            draggable: false,
+            progress: undefined,
+            theme: "light",
+            transition: Bounce,
           });
+        } else {
+          toast.error(result.ErrorMsg || 'Failed to update businesses', {
+            position: "bottom-center",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: false,
+            draggable: false,
+            progress: undefined,
+            theme: "light",
+          });
+        }
       }
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
   };
+  
+  // select status change
+  // const selectStatus = async (e) => {
+  //   try {
+  //     console.log(e.target.value);
+  //     let upddateArray = [];
+  //     if (e.target.value === "approve") {
+  //       upddateArray = selectedRowsState.map((row) => {
+  //         return { id: row.id, approved: "1" };
+  //       });
+  //     }
+  //     if (e.target.value === "pending") {
+  //       upddateArray = selectedRowsState.map((row) => {
+  //         return { id: row.id, approved: "0" };
+  //       });
+  //     }
+  //     if (e.target.value === "reject") {
+  //       upddateArray = selectedRowsState.map((row) => {
+  //         return { id: row.id, approved: "2" };
+  //       });
+  //     }
+  //     if (e.target.value === "delete") {
+  //       upddateArray = selectedRowsState.map((row) => {
+  //         return { id: row.id, isArchived: true };
+  //       });
+  //     }
+
+  //     if (e.target.value === "featured") {
+  //       upddateArray = selectedRowsState.map((row) => {
+  //         return { id: row.id, isFeatured: true };
+  //       });
+  //     }
+
+  //     if (e.target.value === "unfeatured") {
+  //       upddateArray = selectedRowsState.map((row) => {
+  //         return { id: row.id, isFeatured: false };
+  //       });
+  //     }
+
+  //     if (upddateArray.length > 0) {
+  //       console.log(upddateArray);
+
+  //       const { data, error } = await supabase
+  //         .from("business")
+  //         .upsert(upddateArray)
+  //         .select();
+
+  //       if(error) throw error
+  //       getBusinesses()
+  //       setToggleClearRows(!toggledClearRows)
+  //       toast.success('Updated', {
+  //         position: "bottom-center",
+  //         autoClose: 3000,
+  //         hideProgressBar: false,
+  //         closeOnClick: true,
+  //         pauseOnHover: false,
+  //         draggable: false,
+  //         progress: undefined,
+  //         theme: "light",
+  //         transition: Bounce,
+  //         });
+  //     }
+  //   } catch (error) {
+  //     console.log(error)
+  //   }
+  // };
 
   return (
     <>
@@ -210,7 +308,7 @@ const [error,setError]=useState("")
                       <option className="cursor-pointer" value="none">
                         Actions
                       </option>
-                      {user_meta.role == 'super_admin' && (
+                      {user_meta.role == 1 && (
                         <>
                         <option className="cursor-pointer" value="featured">
                           Featured

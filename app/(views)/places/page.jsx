@@ -8,49 +8,69 @@ import { supabase } from "@/lib/supabase";
 const Page = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
 
   useEffect(() => {
-    fetchCategoryCounts();
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch(`${serverurl}category-count/`);
+        const result = await response.json();
+        if (response.ok) {
+          setCategories(result);
+        } else {
+          setError(result.error || 'Failed to fetch categories');
+        }
+      } catch (error) {
+        setError('An unexpected error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
   }, []);
+  // useEffect(() => {
+  //   fetchCategoryCounts();
+  // }, []);
 
-  async function fetchCategoryCounts() {
-    try {
-      // Fetch all categories
-      const { data: categories, error: categoriesError } = await supabase
-        .from("category")
-        .select("*");
+  // async function fetchCategoryCounts() {
+  //   try {
+  //     // Fetch all categories
+  //     const { data: categories, error: categoriesError } = await supabase
+  //       .from("category")
+  //       .select("*");
 
-      if (categoriesError) throw categoriesError;
+  //     if (categoriesError) throw categoriesError;
 
-      // Fetch counts for each category
-      const { data: counts, error: countsError } = await supabase
-        .from("category_business")
-        .select("category_id, business!inner(approved)")
-        .eq("business.approved", '1').eq('business.isArchived', false);
+  //     // Fetch counts for each category
+  //     const { data: counts, error: countsError } = await supabase
+  //       .from("category_business")
+  //       .select("category_id, business!inner(approved)")
+  //       .eq("business.approved", '1').eq('business.isArchived', false);
 
-      console.log(counts);
-      if (countsError) throw countsError;
+  //     console.log(counts);
+  //     if (countsError) throw countsError;
 
-      const combinedData = categories.map((category) => ({
-        data: category,
-        business_count: counts.filter((c) => c.category_id === category.id)
-          .length,
-      }));
+  //     const combinedData = categories.map((category) => ({
+  //       data: category,
+  //       business_count: counts.filter((c) => c.category_id === category.id)
+  //         .length,
+  //     }));
 
-      setCategories(combinedData);
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setLoading(false);
-    }
-  }
+  //     setCategories(combinedData);
+  //   } catch (error) {
+  //     console.log(error);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }
 
   return (
     <div>
       <TopBanner
         img={meeting}
         label="Free Listing"
-        heading="Business Category"
+        heading="Business Categor"
         btnTxt={
           <>
             + List your business <span className="font-bold">for free</span>
@@ -64,12 +84,13 @@ const Page = () => {
         <div className=" px-7 py-16 flex gap-x-3 gap-y-5 flex-wrap">
           {categories.map((category) => (
             <CardCategory
-              key={category.data.id}
-              url={`/places/category/${category.data.id}`}
+              key={category.id}
+              url={`/places/category/${category.id}`}
+              
               img={
-                category.data.thumbnail ? category.data.thumbnail : automotive
+                category.thumbnail ? `${serverurl}media/`+category.thumbnail : automotive
               }
-              title={category.data.name}
+              title={category.name}
               des={`${category.business_count} listings`}
             />
           ))}

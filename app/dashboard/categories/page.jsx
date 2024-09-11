@@ -22,10 +22,12 @@ const Page = () => {
       selector: (row) => row.name,
       sortable: true,
     },
+    
     {
       name: "Actions",
       cell: (row) => (
         <>
+        
           <Link
             href={`/dashboard/categories/update/${row.id}`}
             className="underline"
@@ -42,6 +44,7 @@ const Page = () => {
           ) : (
             "No actions avaiable"
           )} */}
+           
         </>
       ),
     },
@@ -55,16 +58,40 @@ const Page = () => {
   );
 
   useEffect(() => {
+    if (!user || !user.id) {
+      router.push("/");
+      return;
+    }
     const fetchCategories = async () => {
       try {
-        const response = await fetch(`${serverurl}get-categories/`);
+        let response;
+        const headers = { 'Content-Type': 'application/json' };
+        const url = user.role === '3' || user.role === 3
+          ? `${serverurl}get-usercategory/`
+          : `${serverurl}get-categories/`;
+        
+        const options = {
+          method: user.role === '3' ||user.role === 3 ? 'POST' : 'GET',
+          headers,
+          ...(user.role === '3' || user.role === 3  && { body: JSON.stringify({ user_id: user.id }) })
+        };
+
+        response = await fetch(url, options);
+        
         const result = await response.json();
+        
         if (response.ok) {
-          setCategory(result);
+
+          user.role===3 || user.role==='3'?setCategory(result.data):setCategory(result);
+         
+
+
+
         } else {
-          setError(result.error || 'Failed to fetch categories');
+          setError(result.error || 'Failed to fetch businesses');
         }
-      } catch (error) {
+      } 
+       catch (error) {
         setError('An unexpected error occurred');
       } finally {
         setLoading(false);

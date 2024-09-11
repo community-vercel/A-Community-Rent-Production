@@ -35,58 +35,45 @@ const ReviewsForm = ({
       rating: 0,
     },
   });
-
-  const onSubmit = async (formData) => {
+  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
+  const onSubmit = async (formdata) => {
     try {
       setLoading(true);
-      let review_data = {
-        business_id,
-        user_id,
-        user_email,
-        title: formData.title,
-        review: formData.review,
-        rating: formData.rating,
-        status: 0,
-      };
-      const { data: r_data, error: r_error } = await supabase
-        .from("reviews")
-        .insert(review_data)
-        .select()
-        .single();
-      if (r_error) throw r_error;
+  
+      // Create FormData object to handle file uploads
+      const formData = new FormData();
+      formData.append('business_id', business_id);
+      formData.append('user_id', user_id);
+      formData.append('email', user_email);
+      formData.append('title', formdata.title);
+      formData.append('review', formdata.review);
+      formData.append('rating', formdata.rating);
+      formData.append('status', 0);
 
-      if (images && r_data.id) {
-        // upload review images
-        const uploadReviewImages = await uploadImage(
-          r_data.id,
-          images,
-          "reviews",
-          `${r_data.id}/`
-        );
-        if (uploadReviewImages.error) throw uploadReviewImages.error;
-        console.log(uploadReviewImages);
-        let imagesUploadArr = uploadReviewImages
-          .map((img) => img.url)
-          .join(",");
-        console.log(imagesUploadArr);
-
-        // updating reviews table with images url
-        const { data: updateImgsData, error: updateImgsError } = await supabase
-          .from("reviews")
-          .update({ review_files: imagesUploadArr })
-          .eq("id", r_data.id)
-          .select();
+      images.forEach((image) => {
+        formData.append('images', image);
+      });
+      const response = await fetch(`${serverurl}create-review/`, {
+        
+        method: 'POST',
+        body: formData,
+      });
+  
+      const result = await response.json();
+      if (response.ok) {
+        console.log("Review added successfully");
+        reset();
+        setImages([]);
+      } else {
+        setError(result.error || 'Failed to add review');
       }
-      console.log("review added");
-      reset();
-      setImages([])
     } catch (error) {
-      console.log(error);
+      setError('An unexpected error occurred');
     } finally {
       setLoading(false);
     }
   };
-
+  
   const imgDelete = (name) => {
     console.log(name)
     setImages(images.filter(file=>file.name != name))

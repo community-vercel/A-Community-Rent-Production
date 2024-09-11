@@ -11,7 +11,7 @@ const TopBanner = ({ img, label, heading, btnTxt, invert, back }) => {
   const { user, user_meta } = useSelector((state) => state.auth);
 
   let btn;
-  if ((user_meta.role == "business" || user_meta.role == "super_admin") && user.id) {
+  if ((user_meta.role == "3" || user_meta.role == 3  || user_meta.role == "1" || user_meta.role == 1) && user.id) {
     btn = (
       <Link
         href="/dashboard/business"

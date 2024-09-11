@@ -274,6 +274,7 @@ const[message,setMessage]=useState("");
             setImagesSelected([]);
             setImages(null);
             setLogo(null);
+            router.push('/dashboard/business/')
         } else {
             console.error(result.ErrorMsg);
             setCustomErrors({ ...customErrors, form: result.ErrorMsg });
