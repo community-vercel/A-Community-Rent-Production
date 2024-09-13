@@ -357,7 +357,7 @@ const Page = () => {
           <TopBanner
             invert
             back
-            img={category.cover ? category.cover : BB}
+            img={category.cover ? `${serverurl}media/`+category.cover : BB}
             label="Free Listing"
             heading={category}
             btnTxt={

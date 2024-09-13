@@ -72,6 +72,9 @@ const Page = () => {
         }
         // Fetch business details, categories, and tags from the Django API
         const response = await fetch(`${serverurl}get-specifibusiness/`, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
           method: 'POST',
           body: JSON.stringify(formData),
       });

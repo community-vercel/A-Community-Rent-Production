@@ -202,6 +202,7 @@ const CardService = ({business, user_id = null, favoritePageHide = null }) => {
   </p>
 ) : (
   <p className="text-sm text-[#050505] mb-5 break-all">
+
   </p>
 )}
 
