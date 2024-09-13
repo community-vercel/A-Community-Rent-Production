@@ -50,9 +50,7 @@ console.log("Auth",auth)
      
 
       const response = await fetch(`${serverurl}add-category/`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
+   
         method: "POST",
         body: form,
       });

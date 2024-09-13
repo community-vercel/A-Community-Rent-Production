@@ -10,67 +10,39 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ForgetPasswordZod } from "@/zod/ForgetPasswordZod";
-import usePostApi from "@/hooks/usePostApis";
-import { ToastContainer, toast } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
-
-
-import { supabase } from "@/lib/supabase";
 import { useState } from "react";
+import supabase from "@/lib/supabase";
 
-const Page = () => {
+const ForgotPassword = () => {
   const {
     register,
     handleSubmit,
     formState: { errors },
     setError,
-    reset,
   } = useForm({
     resolver: zodResolver(ForgetPasswordZod),
   });
   const [message, setMessage] = useState(
-    "Please enter your  email address. You will receive an email message with instructions on how to reset your password. "
+    "Please enter your username or email address. You will receive an email message with instructions on how to reset your password. "
   );
-  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
-
+ 
   const onSubmit = async (formData) => {
-
-   
-
-    const requestBody = {
-      email: formData.email,
-    };
-
+    console.log(formData,`${process.env.NEXT_PUBLIC_SITE_URL}update-password`);
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10-second timeout
-
-      const response = await fetch(`${serverurl}password-reset/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-        signal: controller.signal,  // Pass the controller's signal to the fetch request
-      });
-
-      clearTimeout(timeoutId);
-
-      const data = await response.json();
-
-      if (data && data.ErrorCode === 0) {
-        toast.success('Password reset instructions sent to your email. Please check your email to reset your password.', { position: "top-right" });
-
-        reset();  // Clear the email field after success
-        setMessage('Password reset instructions sent to your email. Please check your email to reset your password.');
-      } else {
-        setMessage(data.ErrorMsg || 'Password reset failed. Please try again.');
-      }
+      const { data, error } = await supabase.auth.resetPasswordForEmail(
+        formData.email,
+        {
+          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}update-password`,
+        }
+      );
+      if (error) throw error;
+      setMessage('Please check your email');
+      console.log("Forget Password successful", data);
     } catch (error) {
-      setMessage(error|| 'Password reset failed. Please try again.');
-
-    } 
-};
-
-
+      setMessage(error.message);
+      console.error("Forget Password error", error);
+    }
+  };
 
   return (
     <form className="max-w-lg mx-auto w-full" onSubmit={handleSubmit(onSubmit)}>
@@ -103,4 +75,4 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default ForgotPassword;

@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 import { BB } from "@/assets";
 import TopBanner from "@/components/TopBanner";
 import CardService from "@/components/CardService";
-import { supabase } from "@/lib/supabase";
 import { useParams } from "next/navigation";
 import { useSelector } from "react-redux";
 import InfiniteScroll from "react-infinite-scroll-component";
@@ -11,14 +10,11 @@ import Checkbox from "@/components/Checkbox";
 
 import { CitySelect, StateSelect,GetLanguages } from "react-country-state-city";
 import "react-country-state-city/dist/react-country-state-city.css";
+import supabase from "@/lib/supabase";
 
-const Page = () => {
+const Category = () => {
   const [category, setCategory] = useState(null);
-
-  console.log("Category is ",category)
   const [businesses, setBusinesses] = useState([]);
-
-  console.log("usineees",businesses)
   const [loading, setLoading] = useState(true);
   const params = useParams();
   const { user } = useSelector((state) => state.auth);
@@ -33,7 +29,6 @@ const Page = () => {
   const [selectedState, setSelectedState] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
   const [discount, setDiscount] = useState(false);
-  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
 
   // for infinite scroll
   const [page, setPage] = useState(0);
@@ -47,32 +42,28 @@ const Page = () => {
       });
     }
   }, [params.id]);
+
   async function fetchCategoryAndBusinesses() { 
     try {
       setLoading(true); 
+      
       const { from, to } = getFromTo();
-      const formData = {
-        id: params.id,
-        from: from,
-        to: to
-      };
-      const response = await fetch(`${serverurl}get-category-businesses/`,{
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        method: 'POST',
-        body: JSON.stringify(formData),
-    });
-      
-      const result = await response.json();
-      
-      if (result.ErrorCode === 0) {
-        setCategory(result.data[0]); // Assuming category name exists
-        setBusinesses(result.data.filter((item) => item.business_id != null));
-        setPage(page + 1);
-      } else {
-        console.error(result.ErrorMsg);
-      }
+      // Fetch businesses for this category
+      const { data: businessesData, error: businessesError } = await supabase
+        .from("category_business")
+        .select(
+          ` category(*),
+          business(*)
+        `
+        )
+        .eq("category_id", params.id)
+        .eq("business.approved", "1").eq("business.isArchived", false)
+        .range(from, to); 
+
+      if (businessesError) throw businessesError;
+      setCategory(businessesData[0].category);
+      setBusinesses(businessesData.filter((item) => item.business != null));
+      setPage(page + 1);
       
     } catch (error) {
       console.log(error.message);
@@ -80,113 +71,41 @@ const Page = () => {
       setLoading(false);
     }
   }
+
   async function fetchMoreBusiness() {
     try {
-      console.log('runn...');
+       console.log('runn...')
       const { from, to } = getFromTo();
-      const formData = {
-        id: params.id,
-        from: from,
-        to: to
-      };
-  
-      // Fetch businesses for this category with pagination
-      const response = await fetch(`${serverurl}fetch-more-businesses/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-    });
+      // Fetch businesses for this category
+      const { data: businessesData, error: businessesError } = await supabase
+        .from("category_business")
+        .select(
+          `  
+          business(*)
+        `
+        )
+        .eq("category_id", params.id)
+        .eq("business.approved", "1")
+        .eq("business.isArchived", false)
+        .order('id', { ascending: true })
+        .range(from, to);
+
+      if (businessesError) throw businessesError;
+      setBusinesses([
+        ...businesses,
+        ...businessesData.filter((item) => item.business != null),
+      ]);
       
-      const result = await response.json();
-  
-      if (result.ErrorCode === 0) {
-        setBusinesses([
-          ...businesses,
-          ...result.data.filter((item) => item.business_id != null),
-        ]);
-  
-        // Increment page or handle pagination
-        setPage((page) => page + 1);
-  
-        // Check if more businesses are available (optional)
-        if (result.data.length === 0) {
-          setHasMore(false);
-        }
-  
-      } else {
-        console.error(result.ErrorMsg);
-      }
       
+      setPage((page) => page + 1); 
+      // businessesData &&
+      // [...businessesData.filter((item) => item.business != null)] > 0
+      //   ? setHasMore(true)
+      //   : setHasMore(false);
     } catch (error) {
       console.log(error.message);
     }
   }
-  
-  // async function fetchCategoryAndBusinesses() { 
-  //   try {
-  //     setLoading(true); 
-      
-  //     const { from, to } = getFromTo();
-  //     // Fetch businesses for this category
-  //     const { data: businessesData, error: businessesError } = await supabase
-  //       .from("category_business")
-  //       .select(
-  //         ` category(*),
-  //         business(*)
-  //       `
-  //       )
-  //       .eq("category_id", params.id)
-  //       .eq("business.approved", "1").eq("business.isArchived", false)
-  //       .range(from, to); 
-
-  //     if (businessesError) throw businessesError;
-  //     setCategory(businessesData[0].category);
-  //     setBusinesses(businessesData.filter((item) => item.business != null));
-  //     setPage(page + 1);
-      
-  //   } catch (error) {
-  //     console.log(error.message);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // }
-
-  // async function fetchMoreBusiness() {
-  //   try {
-  //      console.log('runn...')
-  //     const { from, to } = getFromTo();
-  //     // Fetch businesses for this category
-  //     const { data: businessesData, error: businessesError } = await supabase
-  //       .from("category_business")
-  //       .select(
-  //         `  
-  //         business(*)
-  //       `
-  //       )
-  //       .eq("category_id", params.id)
-  //       .eq("business.approved", "1")
-  //       .eq("business.isArchived", false)
-  //       .order('id', { ascending: true })
-  //       .range(from, to);
-
-  //     if (businessesError) throw businessesError;
-  //     setBusinesses([
-  //       ...businesses,
-  //       ...businessesData.filter((item) => item.business != null),
-  //     ]);
-      
-      
-  //     setPage((page) => page + 1); 
-  //     // businessesData &&
-  //     // [...businessesData.filter((item) => item.business != null)] > 0
-  //     //   ? setHasMore(true)
-  //     //   : setHasMore(false);
-  //   } catch (error) {
-  //     console.log(error.message);
-  //   }
-  // }
 
   const getFromTo = () => {
     const item_per_page = 2;
@@ -199,155 +118,103 @@ const Page = () => {
   const hanndleDiscountChange = () => {
     setDiscount(!discount);
   };
+
+  // search form
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log(
-      `Search for state:${selectedState}, city:${selectedCity}, rating: ${selectedRating}, discount: ${discount}`
+      `Search for state:${selectedState}, city:${selectedCity},rating: ${selectedRating}, discount: ${discount}`
     );
-  
-    // Build query parameters
-    const requestBody = {
-      category_id: params.id,
-      state: selectedState || '',
-      city: selectedCity || '',
-      language:selectedLangauge || '',
-      rating: selectedRating || '',
-      discount: discount ? 'true' : 'false'
-    };
-  
-    try {
-      setLoading(true);
-  
-      // Fetch data from API
-      const response = await fetch(`${serverurl}search-businesses/`,{
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        method: 'POST',
-        body: JSON.stringify(requestBody),
-      });
-      const result = await response.json();
-  
-      if (response.ok) {
-        console.log("Fetched results:", result.data);
-        setBusinesses(result.data);
-      } else {
-        console.error("Error fetching results:", result.ErrorMsg);
+
+    // const { from, to } = getFromTo();
+    // setPage(page + 1);
+
+    let queryBuilder = supabase
+      .from("category_business")
+      .select("business(*)")
+      .eq("category_id", params.id)
+      .eq("business.approved", "1");
+
+    if (discount) {
+      queryBuilder = queryBuilder
+        .not("business.discount_code", "is", null)
+        .neq("business.discount_code", "");
+    }
+
+    if(selectedLangauge){
+      queryBuilder = queryBuilder.eq("business.language", selectedLangauge);
+    }
+
+    if (selectedState) {
+      queryBuilder = queryBuilder.eq("business.state", selectedState);
+    }
+
+    if (selectedCity) {
+      queryBuilder = queryBuilder.eq("business.city", selectedCity);
+    }
+
+    if (selectedRating) {
+      const { data: reviewData, error: reviewError } = await supabase.rpc(
+        "get_businesses_by_rating",
+        { min_rating: selectedRating }
+      );
+
+      if (reviewError) {
+        console.error("Error fetching reviews data:", reviewError);
+        return;
       }
-    } catch (error) {
-      console.error("Error fetching results:", error.message);
-    } finally {
-      setLoading(false);
+
+      const businessIdsWithRating = reviewData.map(
+        (review) => review.business_id
+      );
+
+      if (businessIdsWithRating.length > 0) {
+        queryBuilder = queryBuilder.in("business.id", businessIdsWithRating);
+      } else {
+        return;
+      }
+    }
+
+    const { data, error } = await queryBuilder;
+
+    if (error) {
+      console.error("Error fetching results:", error);
+    } else {
+      console.log("Fetched results:", data);
+      setBusinesses(data.filter((item) => item.business != null));
     }
   };
-  
-  // search form
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-  //   console.log(
-  //     `Search for state:${selectedState}, city:${selectedCity},rating: ${selectedRating}, discount: ${discount}`
-  //   );
-
-  //   // const { from, to } = getFromTo();
-  //   // setPage(page + 1);
-
-  //   let queryBuilder = supabase
-  //     .from("category_business")
-  //     .select("business(*)")
-  //     .eq("category_id", params.id)
-  //     .eq("business.approved", "1");
-
-  //   if (discount) {
-  //     queryBuilder = queryBuilder
-  //       .not("business.discount_code", "is", null)
-  //       .neq("business.discount_code", "");
-  //   }
-
-  //   if(selectedLangauge){
-  //     queryBuilder = queryBuilder.eq("business.language", selectedLangauge);
-  //   }
-
-  //   if (selectedState) {
-  //     queryBuilder = queryBuilder.eq("business.state", selectedState);
-  //   }
-
-  //   if (selectedCity) {
-  //     queryBuilder = queryBuilder.eq("business.city", selectedCity);
-  //   }
-
-  //   if (selectedRating) {
-  //     const { data: reviewData, error: reviewError } = await supabase.rpc(
-  //       "get_businesses_by_rating",
-  //       { min_rating: selectedRating }
-  //     );
-
-  //     if (reviewError) {
-  //       console.error("Error fetching reviews data:", reviewError);
-  //       return;
-  //     }
-
-  //     const businessIdsWithRating = reviewData.map(
-  //       (review) => review.business_id
-  //     );
-
-  //     if (businessIdsWithRating.length > 0) {
-  //       queryBuilder = queryBuilder.in("business.id", businessIdsWithRating);
-  //     } else {
-  //       return;
-  //     }
-  //   }
-
-  //   const { data, error } = await queryBuilder;
-
-  //   if (error) {
-  //     console.error("Error fetching results:", error);
-  //   } else {
-  //     console.log("Fetched results:", data);
-  //     setBusinesses(data.filter((item) => item.business != null));
-  //   }
-  // };
 
   // reset form 
-  const resetForm = async () => {
-    try {
-      // Reset form fields
-      setSelectedCity('');
-      setSelectedState('');
-      setSelectedRating('');
-      setSelectedLangauge('');
-      setDiscount(false);
-      setstateid('');
-      setPage(1);
-  
-      // Fetch initial businesses for the category
-      const formData = {
-        id: params.id,
-        from: 0, // Starting index
-        to: 9   // Ending index (you can adjust this as needed)
-      };
-  
-      const response = await fetch(`${serverurl}get-category-businesses/`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        method: 'POST',
-        body: JSON.stringify(formData),
-      });
-  
-      const result = await response.json();
-  
-      if (response.ok && result.ErrorCode === 0) {
-        setBusinesses(result.data); // Set businesses data
-        setHasMore(result.data.length >= 10); // Check if there are more records to load
-      } else {
-        console.error(result.ErrorMsg || 'Failed to fetch data');
-      }
-  
+  async function resetForm() { 
+    try { 
+      console.log(page)
+      setBusinesses([])
+      setSelectedCity('')
+      setSelectedState('')
+      setSelectedRating('')
+      setSelectedLangauge('')
+      setDiscount(false)
+      setstateid('')
+      setPage(1)
+       
+      // Fetch businesses for this category
+      const { data: businessesData, error: businessesError } = await supabase
+        .from("category_business")
+        .select(`business(*)`)
+        .eq("category_id", params.id)
+        .eq("business.approved", "1").eq("business.isArchived", false)
+        .range(0, 2);
+ 
+
+      if (businessesError) throw businessesError;
+      setBusinesses(businessesData.filter((item) => item.business != null));
+      setHasMore(true) 
     } catch (error) {
-      console.log('Error resetting form:', error);
-    }
-  };
-  
+      console.log(error);
+    } 
+  }
+
   return (
     <>
       {loading ? (
@@ -357,9 +224,9 @@ const Page = () => {
           <TopBanner
             invert
             back
-            img={category ? `${serverurl}media/`+category.cover : BB}
+            img={category.cover ? category.cover : BB}
             label="Free Listing"
-            heading={category?category.category_name:"Category"}
+            heading={`${category.name}`}
             btnTxt={
               <>
                 + List your business <span className="font-bold">for free</span>
@@ -380,10 +247,8 @@ const Page = () => {
                   <div className="flex gap-x-4 gap-y-5 flex-wrap">
                     {businesses.map((item) => (
                       <CardService
-                        business={item
-                        }
-                        key={item.business_id
-                        }
+                        business={item.business}
+                        key={item.business.id}
                         user_id={user.id}
                       />
                     ))}
@@ -612,4 +477,4 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default Category;
