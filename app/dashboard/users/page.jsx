@@ -7,7 +7,8 @@ import { useSelector } from "react-redux";
 import DataTable from "react-data-table-component";
 import SubHeaderComponent from "@/components/datatable-components/SubHeaderComponent";
 import Loader from "@/components/Loader";
-
+import Link from "next/link";
+import { EyeIcon } from "@heroicons/react/16/solid";
 const Page = () => {
   const { user } = useSelector((state) => state.auth);
   const router = useRouter();
@@ -27,12 +28,25 @@ const Page = () => {
     },
     {
       name: "Role",
-      selector: (row) => row.role,
+      selector: (row) => row.role===1?row='SuperAdmin':row.role===2?row.role='Admin':'User',
       sortable: true,
     },
     {
       name: "Pre-Approved",
       cell: (row) => <CustomDropdown row={row} onChange={handleOnChange} />,
+    },
+    {
+      name: "Actions",
+      cell: (row) => (
+        <>
+          <Link
+            href={`/dashboard/users/${row.id}`}
+            className="underline"
+          >
+            <EyeIcon className="w-5 h-5" />
+          </Link>
+        </>
+      ),
     },
   ];
 
@@ -59,50 +73,67 @@ const Page = () => {
     if (!user.id) return router.push("/");
     getAllUsers();
   }, []);
+  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
 
   useEffect(() => {
     if (!user.id) return router.push("/");
   }, [user]);
-
   const getAllUsers = async () => {
     try {
       setLoading(true);
-      const {
-        data: { users: usersData },
-        error,
-      } = await supabaseAdmin.auth.admin.listUsers();
-      if (error) throw error;
-      let authUsers = [...usersData];
-
-      const { data: users_meta, error: users_meta_error } = await supabase
-        .from("user_meta")
-        .select(`*`);
-      if (users_meta_error) throw users_meta_error;
-      let usersMeta = [...users_meta];
-
-      let transformedData = [];
-      usersMeta.forEach((meta) => {
-        authUsers.forEach((authUser) => {
-          if (meta.user_id == authUser.id && meta.role !== "super_admin") {
-            transformedData.push({
-              id: meta.user_id,
-              role: meta.role,
-              pre_approved: meta.pre_approved,
-              name: authUser.user_metadata.full_name,
-              email: authUser.email,
-            });
-          }
-        });
-      });
-
-      console.log(transformedData);
-      setUsers(transformedData);
+      const response = await fetch(`${serverurl}get-all-users/`);
+      const result = await response.json();
+      if (response.ok) {
+        setUsers(result.data);
+      } else {
+        console.error(result.ErrorMsg);
+      }
     } catch (error) {
-      console.log(error);
+      console.error('Error fetching users:', error);
     } finally {
       setLoading(false);
     }
   };
+  
+  // const getAllUsers = async () => {
+  //   try {
+  //     setLoading(true);
+  //     const {
+  //       data: { users: usersData },
+  //       error,
+  //     } = await supabaseAdmin.auth.admin.listUsers();
+  //     if (error) throw error;
+  //     let authUsers = [...usersData];
+
+  //     const { data: users_meta, error: users_meta_error } = await supabase
+  //       .from("user_meta")
+  //       .select(`*`);
+  //     if (users_meta_error) throw users_meta_error;
+  //     let usersMeta = [...users_meta];
+
+  //     let transformedData = [];
+  //     usersMeta.forEach((meta) => {
+  //       authUsers.forEach((authUser) => {
+  //         if (meta.user_id == authUser.id && meta.role !== "super_admin") {
+  //           transformedData.push({
+  //             id: meta.user_id,
+  //             role: meta.role,
+  //             pre_approved: meta.pre_approved,
+  //             name: authUser.user_metadata.full_name,
+  //             email: authUser.email,
+  //           });
+  //         }
+  //       });
+  //     });
+
+  //     console.log(transformedData);
+  //     setUsers(transformedData);
+  //   } catch (error) {
+  //     console.log(error);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   return (
     <>

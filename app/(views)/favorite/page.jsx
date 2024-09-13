@@ -15,21 +15,41 @@ const Page = () => {
     if (!user.id) router.push("/");
     fetchResults();
   }, []);
+  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
 
   async function fetchResults() {
-    const { data: haveData, error: haveError } = await supabase
-      .from("favorite")
-      .select("*,business(*)")
-      .eq("user_id", user.id);
-
-    if (haveError) {
-      console.error("Error fetching results:", error);
-    } else {
-      console.log(haveData);
-      setResults(haveData);
+    try {
+      setLoading(true);
+      const response = await fetch(`${serverurl}fetch-favorites/?user_id=${user.id}`);
+      const result = await response.json();
+      
+      if (response.ok) {
+        console.log(result.data);
+        setResults(result.data);
+      } else {
+        console.error(result.ErrorMsg);
+      }
+    } catch (error) {
+      console.error('Error fetching results:', error);
+    } finally {
       setLoading(false);
     }
   }
+  
+  // async function fetchResults() {
+  //   const { data: haveData, error: haveError } = await supabase
+  //     .from("favorite")
+  //     .select("*,business(*)")
+  //     .eq("user_id", user.id);
+
+  //   if (haveError) {
+  //     console.error("Error fetching results:", error);
+  //   } else {
+  //     console.log(haveData);
+  //     setResults(haveData);
+  //     setLoading(false);
+  //   }
+  // }
 
   const favoritePageHide = (business_id) => {
     console.log(business_id)
