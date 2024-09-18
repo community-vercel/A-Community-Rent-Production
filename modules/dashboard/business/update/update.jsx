@@ -4,8 +4,6 @@ import InputField from "@/components/InputField";
 import { useRouter, useParams } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import Select from "react-select";
-
-import { supabase } from "@/lib/supabase";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AddBusinessZod } from "@/zod/AddBusinessZod";
@@ -20,261 +18,134 @@ import {
   GetLanguages,CitySelect, StateSelect ,GetState,GetCity
 } from "react-country-state-city";
 import "react-country-state-city/dist/react-country-state-city.css";
+import supabase from "@/lib/supabase";
 
 
-const Page = () => {
+const Update = () => {
   const params = useParams();
   const router = useRouter();
 
   const { user_meta, user } = useSelector((state) => state.auth);
 
-  const [categories, setCategories] = useState(null);
-  
-  console.log("Categories",categories)
-  //data coming from category tabel stored
+  const [buserid, setbuserid] = useState();
+  const [categories, setCategories] = useState(null); //data coming from category tabel stored
   const [selectedCategories, setSelectedCategories] = useState(null); // local selected form data stored
   const [selectedCategoriesDB, setSelectedCategoriesDB] = useState(null); // DB selected form data stored
   const selectInputRef = useRef();
 
   const [logo, setLogo] = useState(null); //for logo input
   const [images, setImages] = useState([]); // for images input
-console.log("images",images)
+
   const [logoDB, setLogoDB] = useState(null); //for logo input
   const [imagesDB, setImagesDB] = useState([]); // for images input
-  console.log("images my db",imagesDB)
+
   const [customErrors, setCustomErrors] = useState({}); // for files error
 
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
 
-  const [imagesSelected, setImagesSelected] = useState([]);
-  const [tags, setTags] = useState([]);
-  const [currentTag, setCurrentTag] = useState('');
-  
-  // const handleKeyDown = (e) => {
-  //   if (e.key === 'Enter' && currentTag.trim() !== '') {
-  //     e.preventDefault();
-  //     if (!tags.includes(currentTag.trim())) {
-  //       setTags([...tags, currentTag.trim()]);
-  //       setCurrentTag('');
-  //     }
-  //   }
-  // };
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && currentTag.trim() !== '') {
-      e.preventDefault();
-      const trimmedTag = currentTag.trim();
-      // Add tag if it's not already in the list
-      if (!tags.includes(trimmedTag)) {
-        setTags(prevTags => [...prevTags, trimmedTag]);
-        setCurrentTag(''); // Clear the input field
-      }
-    }
-  };
-  
-  const removeTag = (index) => {
-    setTags(tags.filter((_, i) => i !== index));
-  };
+
   const [languageList, setLanguageList] = useState([]);
   const countryid = 233; 
   const [stateid, setstateid] = useState(0);
   const [selectedState, setSelectedState] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
-  const [logourl,SetLogoUrl]=useState()
+
   const [selectedStateDB, setSelectedStateDB] = useState({});
   const [selectedCityDB, setSelectedCityDB] = useState({});
-  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
+
   useEffect(() => {
-    // if (user && !user.id) router.push("/");
+    if (user && !user.id) router.push("/");
     GetLanguages().then((result) => {
       setLanguageList(result);
     });
+
+    // function to fill the form data from data base
     const getData = async () => {
       try {
-        setLoading(true);
-    
-        // Define the business ID from the params (assuming `params.id` is set elsewhere)
-        const businessId = params.id;
-    
-        const formData={
-          id:businessId
-        }
-        // Fetch business details, categories, and tags from the Django API
-        const response = await fetch(`${serverurl}get-specifibusiness/`, {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          method: 'POST',
-          body: JSON.stringify(formData),
-      });
+        // get all current buiness categories
+        const { data, error } = await supabase
+          .from("category_business")
+          .select(`category(id,name)`)
+          .eq("business_id", params.id).eq("category.isArchived", false);
+        let currentCategories =
+          data.length > 0 &&
+          data.map((item) => {
+            return { label: item?.category?.name, value: item?.category?.id };
+          }); 
+        setSelectedCategoriesDB(currentCategories.filter(item => item.label != undefined || item.label != null));
 
-      const { data, ErrorCode, ErrorMsg } = await response.json();
-      if (ErrorCode !== 0) {
-          throw new Error(ErrorMsg);
-        }
-    console.log("data",data)
-        const { business, categories, tags } = data;
-        console.log("data bus",business,"cat",categories,"tags",tags)
+        // get all available categories list
+        const { data: allCats, error: alCatsError } = await supabase
+          .from("category")
+          .select().eq("isArchived", false);
+        if (alCatsError) throw alCatsError;
+        let reArrangeData = allCats.map((item) => {
+          return { value: item?.id, label: item?.name };
+        });
+        setCategories(reArrangeData.filter(item => item.label != undefined || item.label != null));
 
-        // Set business details in state
-        setValue("b_name", data.name);
-        setValue("b_description",data.description);
-        setValue("b_email", data.email);
-        setValue("b_phone",  data.phone);
-        setValue("b_website",  data.website);
-        setValue("b_location",  data.location);
-        setValue("b_operating_hours",  data.operating_hours);
-        setValue("b_zip",  data.zip);
-        setValue("b_facebook",  data.socials?.facebook);
-        setValue("b_instagram",  data.socials?.instagram);
-        setValue("b_youtube",  data.socials?.youtube);
-        setValue("b_tiktok",  data.socials?.tiktok);
-        setValue("b_twitter",  data.socials?.twitter);
-        setValue("b_discount_code",  data.discount_code);
-        setValue("b_discount_message",  data.discount_message);
-        setValue("b_language",  data.language);
-        const processLogoUrl = (logoUrl) => {
-          return logoUrl.replace('/api/', '');
-        };
+        // get tags
+        const { data: tags_data, error: tag_error } = await supabase
+          .from("tag_business")
+          .select("*")
+          .eq("business_id", params.id)
+          .limit(1);
+        if (!tag_error) {setValue("b_tags", tags_data.tag);}
         
-        // Construct the final logo URL
-         const logoUrls = processLogoUrl(serverurl+data.logo);
-         SetLogoUrl(logoUrls)
 
-        setLogoDB(data.logo);
-        setImagesDB( data.images);
-    
-        // Set current categories
-        const currentCategories = categories.map((item) => ({
-          label: item.category__name
-          ,
-          value: item.category__id
-        }));
-        setSelectedCategoriesDB(currentCategories);
-        const tagsString = tags.join(',');
+        // get business details
+        const { data: businessDetails, error: businessDetailsError } =
+          await supabase
+            .from("business")
+            .select("*")
+            .eq("id", params.id)
+            .single();
+        if (businessDetailsError) throw businessDetailsError;
+        setValue("b_name", businessDetails.name);
+        setValue("b_description", businessDetails.description);
+        setValue("b_email", businessDetails.email);
+        setValue("b_phone", businessDetails.phone);
+        setValue("b_website", businessDetails.website);
+        setValue("b_location", businessDetails.location);
+        setValue("b_operating_hours", businessDetails.operating_hours);
+        // setValue("b_state", businessDetails.state);
+        // setValue("b_country", businessDetails.country);
+        // setValue("b_city", businessDetails.city);
+        setValue("b_zip", businessDetails.zip);
+        setValue("b_facebook", businessDetails.socials?.facebook);
+        setValue("b_instagram", businessDetails.socials?.instagram);
+        setValue("b_youtube", businessDetails.socials?.youtube);
+        setValue("b_tiktok", businessDetails.socials?.tiktok);
+        setValue("b_twitter", businessDetails.socials?.twitter);
+        setValue("b_discount_code", businessDetails.discount_code);
+        setValue("b_discount_message", businessDetails.discount_message);
+        setValue("b_language", businessDetails.language);
 
-        // Set tags
-        setValue("b_tags", tagsString);
-        setTags(tags)
-    
-        // Set categories
-        const reArrangeData = categories.map((item) => ({
-          value: item.category__id,
-          label: item.category__name
-        }));
-        
-        setCategories(reArrangeData);
-    
-        // Fetch states and cities based on business details
+        setLogoDB(businessDetails.logo);
+        setImagesDB(businessDetails.images);
+        setbuserid(businessDetails.user_id)
+        setLoading(false); 
+
         GetState(countryid).then((states) => {
           states.map(state => {
-            if (state.name === data.state) {
-              setSelectedStateDB(state);
+            if(state.name === businessDetails.state) {
+              setSelectedStateDB(state)
               GetCity(countryid, state.id).then((cities) => {
-                cities.map(city => {
-                  if (city.name === data.city) {
-                    setSelectedCityDB(city);
+                cities.map(city =>{
+                  if(city.name === businessDetails.city){
+                    setSelectedCityDB(city) 
                   }
-                });
+                })
               });
             }
-          });
-        });
-    
-        setLoading(false);
+          })
+        });  
+
       } catch (error) {
         console.log(error);
-        setLoading(false);
       }
     };
-    
-    // function to fill the form data from data base
-    // const getData = async () => {
-    //   try {
-    //     // get all current buiness categories
-    //     const { data, error } = await supabase
-    //       .from("category_business")
-    //       .select(`category(id,name)`)
-    //       .eq("business_id", params.id);
-    //     let currentCategories =
-    //       data.length > 0 &&
-    //       data.map((item) => {
-    //         return { label: item?.category?.name, value: item?.category?.id };
-    //       });
-    //     setSelectedCategoriesDB(currentCategories);
-
-    //     // get all available categories list
-    //     const { data: allCats, error: alCatsError } = await supabase
-    //       .from("category")
-    //       .select();
-    //     if (alCatsError) throw alCatsError;
-    //     let reArrangeData = allCats.map((item) => {
-    //       return { value: item?.id, label: item?.name };
-    //     });
-    //     setCategories(reArrangeData);
-
-    //     // get tags
-    //     const { data: tags_data, error: tag_error } = await supabase
-    //       .from("tag_business")
-    //       .select("*")
-    //       .eq("business_id", params.id)
-    //       .limit(1);
-    //     if (!tag_error) {setValue("b_tags", tags_data.tag);}
-        
-
-    //     // get business details
-    //     const { data: businessDetails, error: businessDetailsError } =
-    //       await supabase
-    //         .from("business")
-    //         .select("*")
-    //         .eq("id", params.id)
-    //         .single();
-    //     if (businessDetailsError) throw businessDetailsError;
-    //     setValue("b_name", businessDetails.name);
-    //     setValue("b_description", businessDetails.description);
-    //     setValue("b_email", businessDetails.email);
-    //     setValue("b_phone", businessDetails.phone);
-    //     setValue("b_website", businessDetails.website);
-    //     setValue("b_location", businessDetails.location);
-    //     setValue("b_operating_hours", businessDetails.operating_hours);
-    //     // setValue("b_state", businessDetails.state);
-    //     // setValue("b_country", businessDetails.country);
-    //     // setValue("b_city", businessDetails.city);
-    //     setValue("b_zip", businessDetails.zip);
-    //     setValue("b_facebook", businessDetails.socials?.facebook);
-    //     setValue("b_instagram", businessDetails.socials?.instagram);
-    //     setValue("b_youtube", businessDetails.socials?.youtube);
-    //     setValue("b_tiktok", businessDetails.socials?.tiktok);
-    //     setValue("b_twitter", businessDetails.socials?.twitter);
-    //     setValue("b_discount_code", businessDetails.discount_code);
-    //     setValue("b_discount_message", businessDetails.discount_message);
-    //     setValue("b_language", businessDetails.language);
-
-    //     setLogoDB(businessDetails.logo);
-    //     setImagesDB(businessDetails.images);
-
-    //     setLoading(false);
-    //     console.log(businessDetails)
-
-    //     GetState(countryid).then((states) => {
-    //       states.map(state => {
-    //         if(state.name === businessDetails.state) {
-    //           setSelectedStateDB(state)
-    //           GetCity(countryid, state.id).then((cities) => {
-    //             cities.map(city =>{
-    //               if(city.name === businessDetails.city){
-    //                 setSelectedCityDB(city) 
-    //               }
-    //             })
-    //           });
-    //         }
-    //       })
-    //     });  
-
-    //   } catch (error) {
-    //     console.log(error);
-    //   }
-    // };
 
     getData();
   }, []);
@@ -291,124 +162,228 @@ console.log("images",images)
   });
 
   // update form data
-  
-  
   const onSubmit = async (formData) => {
-
-    console.log("images",images)
-    setAdding(true);
-
     try {
-        const formDataToSend = new FormData();
-        
-        if (logo) {
-            formDataToSend.append('logo', logo[0]);
+      setAdding(true);
+      let socials = {
+        facebook: formData.b_facebook,
+        instagram: formData.b_instagram,
+        youtube: formData.b_youtube,
+        tiktok: formData.b_tiktok,
+        twitter: formData.b_twitter,
+      };
+      let businessData = {
+        name: formData.b_name,
+        description: formData.b_description,
+        phone: formData.b_phone,
+        email: formData.b_email,
+        website: formData.b_website,
+        operating_hours: formData.b_operating_hours,
+        location: formData.b_location,
+        city: selectedCity ? selectedCity : selectedCityDB.name,
+        state: selectedState ? selectedState : selectedStateDB.name,
+        country: formData.b_country,
+        zip: formData.b_zip,
+        user_id: buserid,
+        socials,
+        discount_code:formData.b_discount_code,
+        discount_message:formData.b_discount_message,
+        language:formData.b_language
+      };
+      console.log(businessData)
+      const { error: b_error } = await supabase
+        .from("business")
+        .update(businessData)
+        .eq("id", params.id);
+      if (b_error) throw b_error;
+      if (selectedCategories && selectedCategories.length) {
+        // agr selected km h DB wali mn sy to DB wali my sy wo filter out kro jo del krni h
+        if (selectedCategories.length < selectedCategoriesDB.length) {
+          const categoriesToDelete = selectedCategoriesDB.filter(
+            (dbItem) =>
+              !selectedCategories.some(
+                (selectedItem) => selectedItem.value === dbItem.value
+              )
+          );
+          const response = await supabase
+            .from("category_business")
+            .delete()
+            .in(
+              "category_id",
+              categoriesToDelete.map((item) => item.value)
+            )
+            .eq("business_id", params.id);
+          // agr del krny walo ki and db walo ki lenght same h to check kro k dono ki ids match krti hen ya nae? agrr match krti hen to mtlb selectedCategories mn new category h
+          if (selectedCategoriesDB.length == categoriesToDelete.length) {
+            const matchBoth = selectedCategoriesDB.filter((item) =>
+              categoriesToDelete.some((item2) => item.value == item2.value)
+            );
+            let transformCats = selectedCategories.map((cat) => {
+              return { category_id: cat.value, business_id: params.id };
+            });
+            const { error: cat_error } = await supabase
+              .from("category_business")
+              .insert(transformCats);
+            if (cat_error) throw cat_error;
+            setSelectedCategories([]);
+          }
         }
-        else{
-          formDataToSend.append('logo', logoDB);
+        // agr selectedCategories ki lenght zada h to filter out categories to add and them
+        else if (selectedCategories.length >= selectedCategoriesDB.length) {
+          const categoriesToAdd = selectedCategories.filter(
+            (dbItem) =>
+              !selectedCategoriesDB.some(
+                (selectedItem) => selectedItem.value === dbItem.value
+              )
+          );
+          let transformCats = categoriesToAdd.map((cat) => {
+            return { category_id: cat.value, business_id: params.id };
+          });
+          const { error: cat_error } = await supabase
+            .from("category_business")
+            .insert(transformCats);
+          if (cat_error) throw cat_error;
+          setSelectedCategories([]);
         }
-if(images){
-
-
-       images.forEach(image => {
-            formDataToSend.append('images', image);
-        });
-      }else{
-        formDataToSend.append('images', imagesDB);
-
+        // agr db m koi record nae h lekin new category added h
+        else if (selectedCategories.length > 0 && !selectedCategoriesDB) {
+          let transformCats = selectedCategories.map((cat) => {
+            return { category_id: cat.value, business_id: params.id };
+          });
+          const { error: cat_error } = await supabase
+            .from("category_business")
+            .insert(transformCats);
+          if (cat_error) throw cat_error;
+          setSelectedCategories([]);
+        }
       }
-      const tagsString = tags.join(","); // Convert tags array to comma-separated string
 
-        // Prepare business data
-        const businessData = {
-            id: params.id,
-            name: formData.b_name,
-            description: formData.b_description,
-            phone: formData.b_phone,
-            email: formData.b_email,
-            website: formData.b_website,
-            operating_hours: formData.b_operating_hours,
-            location: formData.b_location,
-            city: selectedCity ? selectedCity : selectedCityDB.name,
-            state: selectedState ? selectedState : selectedStateDB.name,
-            country: formData.b_country,
-            zip: formData.b_zip,
-            user_id: user.id,
-            socials: {
-                facebook: formData.b_facebook,
-                instagram: formData.b_instagram,
-                youtube: formData.b_youtube,
-                tiktok: formData.b_tiktok,
-                twitter: formData.b_twitter,
-            },
-            discount_code: formData.b_discount_code,
-            discount_message: formData.b_discount_message,
-            language: formData.b_language,
-            tags: formData.b_tags ? tagsString: [],
-            categories: selectedCategories?selectedCategories.map(cat => cat.value):selectedCategoriesDB.map((ele) => ele),
-        };
+      // check if form has tags added, if have then add to tag_business relation
+      if (formData.b_tags) {
+        const { error } = await supabase
+          .from("tag_business")
+          .upsert({ tag: formData.b_tags,business_id:params.id }) 
+        if (error) throw error;
+        console.log("business tags done");
+      }
 
-        formDataToSend.append('businessData', JSON.stringify(businessData));
-
-        // Send form data to backend
-        const response = await fetch(`${serverurl}update-businessdata/`, {
-            method: 'POST',
-            body: formDataToSend,
-        });
-
-        const result = await response.json();
-        if (!response.ok || result.ErrorCode !== 0) {
-            throw new Error(result.ErrorMsg || 'Failed to update business');
+      // imgs and logo
+      if (logo) {
+        if(logoDB) {
+          const oldLogoUrl = extractImagePath(logoDB).replace("business/", "");
+          const { data: oldLogoRemoveData, error: oldLogoRemoveError } =
+            await supabase.storage.from("business").remove([oldLogoUrl]);
+          if (oldLogoRemoveError) throw oldLogoRemoveError;
         }
+        
+        //  upload logo
+        const uploadBusinessLogo = await uploadImage(
+          params.id,
+          logo,
+          "business",
+          `${params.id}/`
+        );
+        if (uploadBusinessLogo.error) throw uploadBusinessLogo.error;
+        const { data: updateLogoData, error: updateLogoError } = await supabase
+          .from("business")
+          .update({ logo: uploadBusinessLogo[0].url })
+          .eq("id", params.id)
+          .select();
+      }
+      if (images.length>0) {
+        const uploadBusinessImages = await uploadImage(
+          params.id,
+          images,
+          "business",
+          `${params.id}/`
+        );
+        if (uploadBusinessImages.error) throw uploadBusinessImages.error;
+        
+        let imagesUploadArr = uploadBusinessImages
+          .map((img) => img.url)
+          .join(",");
+        if (imagesDB && imagesDB.split(",").length > 0)
+          imagesUploadArr = imagesUploadArr + "," + imagesDB;
+        console.log(imagesUploadArr.split(","));
 
-        console.log("Business updated successfully");
-        router.push(`/places/category/business/${params.id}`);
+
+        const { data: updateImagesData, error: updateImagesError } =
+          await supabase
+            .from("business")
+            .update({ images: imagesUploadArr })
+            .eq("id", params.id)
+            .select();
+        if (updateImagesError) throw updateImagesError;
+      }
+      console.log("updated");
+
+
+      
+
+      let notification_operation;
+      let recevier_id;
+      if(user_meta.role == "super_admin"){
+        notification_operation = 'admin_update'
+        recevier_id = buserid
+      }else{
+        notification_operation = 'user_update'
+        recevier_id= 'admin'
+      }
+      const notification_data = {
+        recevier_id,
+        notification_type:'business',
+        notification_operation,
+        related_entity_id:params.id
+      }
+      const { error:notification_error } = await supabase
+      .from('notification')
+      .insert(notification_data)
+      if(notification_error) throw notification_error
+
+
+
+      router.push("/places/category/business/" + params.id);
     } catch (error) {
-        console.log("Error:", error);
+      console.log(error);
     } finally {
-        setAdding(false);
+      setAdding(false);
     }
-};
-
+  };
 
   const imgDelete = async (name) => {
-    setImages(images.filter((file) => file.name != name));
-    if (name.includes("business/")) {
+    console.log(name);
+    if (name.includes("http")) {
       try {
-        const response = await fetch(`${serverurl}delete-businessimage/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                image_url: name,
-                business_id: params.id
-            }),
-        });
+        setImagesDB(
+          [...imagesDB.split(",").filter((img) => img !== name)].join(",")
+        );
 
-        const result = await response.json();
-        if (!response.ok || result.ErrorCode !== 0) {
-            throw new Error(result.ErrorMsg || 'Failed to delete image');
-        }
+        const oldUrl = extractImagePath(name).replace("business/", "");
+        const { data: oldUrlData, error: oldUrlError } = await supabase.storage
+          .from("business")
+          .remove([oldUrl]);
+        if (oldUrlError) throw oldUrlError;
 
-        console.log("Image deleted successfully", imagesDB);
-
-        // Update state with new images list
-        setImagesDB(prevImagesDB => prevImagesDB.filter((img) => img !== name));
-        setImages(prevImages => prevImages.filter((file) => file.name !== name));
-        
-    } catch (error) {
-        console.error("Error:", error);
-    }
-    }
-    else{
+        const { data: updateImagesData, error: updateImagesError } =
+          await supabase
+            .from("business")
+            .update({
+              images: [
+                ...imagesDB.split(",").filter((img) => img !== name),
+              ].join(","),
+            })
+            .eq("id", params.id)
+            .select();
+        if (updateImagesError) throw updateImagesError;
+        console.log(
+          [...imagesDB.split(",").filter((img) => img !== name)].join(",")
+        );
+      } catch (error) {}
+    } else {
       setImages(images.filter((file) => file.name != name));
-
-    
-    
-  }
-};
-
+    }
+    console.log(images);
+  };
 
   return (
     <>
@@ -448,7 +423,7 @@ if(images){
                 <div className="flex gap-4 items-center">
                   <span>Current logo:</span>
                   <Image
-                    src={logourl}
+                    src={logoDB}
                     alt=""
                     className="w-14 h-14 my-4 rounded-full bg-white d-flex p-1"
                     width={100}
@@ -479,10 +454,6 @@ if(images){
                 accept="image/jpeg,image/png,image/webp"
                 onChange={(e) => {
                   setImages([...images, ...Array.from(e.target.files)]);
-                  setImagesSelected([
-                    ...imagesSelected,
-                    ...Array.from(e.target.files),
-                  ]);
                   setCustomErrors({
                     ...customErrors,
                     images: "",
@@ -529,8 +500,8 @@ if(images){
                     ))}
 
                     {imagesDB &&
-                      imagesDB.length > 0 &&
-                      [...imagesDB].map((item, index) => (
+                      imagesDB.split(",").length > 0 &&
+                      [...imagesDB?.split(",")].map((item, index) => (
                         <>
                           {item && (
                             <div className="relative h-full" key={`index${index}`}>
@@ -538,7 +509,7 @@ if(images){
                                 key={index}
                                 src={
                                   typeof item == "string"
-                                    ? serverurl+'media/'+item
+                                    ? item
                                     : URL.createObjectURL(item)
                                 }
                                 alt=""
@@ -804,38 +775,6 @@ if(images){
               </div>
             )}
 
-
-<div className="mt-5">
-  <label htmlFor="b_tags" className="block text-sm font-medium text-gray-700">
-    Tags
-  </label>
-  <div className="mt-1 flex flex-wrap gap-2 border border-gray-300 rounded-md p-2 bg-white">
-    {tags.map((tag, index) => (
-      <span key={index} className="bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded-full">
-        {tag}
-        <button
-          type="button"
-          onClick={() => removeTag(index)}
-          className="ml-2 text-blue-500 hover:text-blue-700"
-        >
-          &times;
-        </button>
-      </span>
-    ))}
-    <input
-      id="b_tags"
-      name="b_tags"
-      type="text"
-      value={currentTag}
-      onChange={(e) => setCurrentTag(e.target.value)}
-      onKeyDown={handleKeyDown}
-      className="flex-1 outline-none p-1"
-      placeholder="Add a tag and press Enter"
-    />
-  </div>
-</div>
-            
-{/* 
             <div className="mt-5">
               <Formlabel text="Tags (comma seperated)" forLabel="b_tags" />
               <InputField
@@ -845,7 +784,7 @@ if(images){
                 register={register}
                 error={""}
               ></InputField>
-            </div> */}
+            </div>
 
             <button
               type="submit"
@@ -861,4 +800,4 @@ if(images){
   );
 };
 
-export default Page;
+export default Update;

@@ -1,7 +1,7 @@
 "use client";
 import { inner, twitter } from "@/assets";
 import ListTopBanner from "@/components/ListTopBanner";
-import { supabase } from "@/lib/supabase";
+import supabase from "@/lib/supabase";
 import {
   EnvelopeIcon,
   MapPinIcon,
@@ -22,187 +22,106 @@ import { useParams, useRouter } from "next/navigation";
 import ReviewsForm from "@/components/ReviewsForm";
 import StarRating from "@/components/StarRating";
 
-const Page = () => {
+const BusinessId = () => {
   const [business, setBusiness] = useState([]);
   const [categories, setCategories] = useState([]);
   const [reviews, setReviews] = useState([]);
-  console.log("Status",reviews)
-
   const [stats, setStats] = useState({});
-  console.log("Status",stats)
   const [isFavorite, setIsFavorite] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [showReviewForm, setShowReviewForm] = useState(false);
   const params = useParams();
-  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
 
   const { user, user_meta } = useSelector((state) => state.auth);
-
-  console.log("USER",user_meta)
   const router = useRouter();
+
   useEffect(() => {
     async function fetchBusinessDetails() {
-      console.log("checking")
       try {
         setLoading(true);
-  
-        // Fetch business details from Django API
-        const businessId = params.id;
-    
-        const formData={
-          id:businessId,
-          user_id:user.id,
-          user_role:user_meta.role
-        }
-        // Fetch business details, categories, and tags from the Django API
-        const response = await fetch(`${serverurl}get-specifibusiness/`, {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          method: 'POST',
-          body: JSON.stringify(formData),
-      });
-        const result = await response.json();
-        console.log("checking",result)
 
-        if (result.ErrorCode !== 0) {
-          throw new Error(result.ErrorMsg);
-        }
-  
-        const data = result.data;
-  console.log("data is",data)
-        if (data.approved !== 1 || data.approved !== "1" && user && data.user_id === user.id) {
+        // Fetch business details
+        const { data, error } = await supabase
+          .from("business")
+          .select("*")
+          .eq("id", params.id)
+          .single();
+
+        if (error) throw error;
+
+        if (data.approved !== "1" && user && data.user_id == user.id) {
           console.log("not approved but owner");
-        } else if (data.approved !== 1 || data.approved !== "1" && user && user_meta.role ===1) {
+        } else if (
+          data.approved !== "1" &&
+          user &&
+          user_meta.role === "super_admin"
+        ) {
           console.log("system owner");
-        } else if (data.approved !== 1 || data.approved !== "1 " ) {
+        } else if (data.approved !== "1") {
           console.log("not approved");
-          // router.push("/");
+          router.push("/");
         } else {
           console.log("approved");
         }
-  
+
         setBusiness(data);
+        console.log(data);
         setStatus(data.approved);
-        
-  
-        // Check if the business is favorited by the user
-        // if (user.id) {
-        //   const favoriteResponse = await fetch(`/api/favorites/?user_id=${user.id}&business_id=${data.id}`);
-        //   const favoriteResult = await favoriteResponse.json();
-  
-        //   if (favoriteResult.data && favoriteResult.data.id) {
-        //     setIsFavorite(true);
-        //   }
-        // }
-  
+
+        if (user.id) {
+          const { data: haveData, error: haveError } = await supabase
+            .from("favorite")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("business_id", data.id)
+            .single();
+
+          if (haveData && haveData.id) {
+            setIsFavorite(!isFavorite);
+          }
+        }
+
         setLoading(false);
-  
-        // Set categories
-        setCategories(data.categories);
-  
-        // Set reviews
-        setReviews(data.reviews);
-        console.log(data.reviews);
-  
-        // Set stats
-        setStats(data.statistics);
-        console.log(data.statistics);
-  
+
+        const { data: categoryBusinessData, error: categoryBusinessError } =
+          await supabase
+            .from("category_business")
+            .select("category(id,name)")
+            .eq("business_id", params.id)
+            .eq("category.isArchived", false);
+
+        if (categoryBusinessError) throw categoryBusinessError;
+        setCategories(
+          categoryBusinessData.filter((item) => item.category !== null)
+        );
+        const { data: reviewsBusinessData, error: reviewsBusinessError } =
+          await supabase
+            .from("reviews")
+            .select("*")
+            .eq("business_id", params.id)
+            .eq("status", "1")
+            .eq("isArchived", false);
+
+        if (reviewsBusinessError) throw reviewsBusinessError;
+        setReviews(reviewsBusinessData);
+        console.log(reviewsBusinessData);
+
+        const { data: statsData, error: statsError } = await supabase.rpc(
+          "get_rating_stats",
+          { business_id_param: params.id }
+        );
+
+        if (statsError) throw statsError;
+        console.log(statsData);
+        setStats(statsData);
       } catch (error) {
         console.log(error.message);
-        setLoading(false);
       }
     }
-  
+
     fetchBusinessDetails();
-  }, [params.id, user, user_meta.role]);
-  
-  // useEffect(() => {
-  //   async function fetchBusinessDetails() {
-  //     try {
-  //       setLoading(true);
-
-  //       // Fetch business details
-  //       const { data, error } = await supabase
-  //         .from("business")
-  //         .select("*")
-  //         .eq("id", params.id)
-  //         .single();
-
-  //       if (error) throw error;
-
-  //       if (data.approved !== "1" && user && data.user_id == user.id) {
-  //         console.log("not approved but owner");
-  //       } else if (
-  //         data.approved !== "1" &&
-  //         user &&
-  //         user_meta.role === "super_admin"
-  //       ) {
-  //         console.log("system owner");
-  //       } else if (data.approved !== "1") {
-  //         console.log("not approved");
-  //         router.push("/");
-  //       } else {
-  //         console.log("approved");
-  //       }
-
-  //       setBusiness(data);
-  //       console.log(data);
-  //       setStatus(data.approved);
-
-  //       if (user.id) {
-  //         const { data: haveData, error: haveError } = await supabase
-  //           .from("favorite")
-  //           .select("*")
-  //           .eq("user_id", user.id)
-  //           .eq("business_id", data.id)
-  //           .single();
-
-  //         if (haveData && haveData.id) {
-  //           setIsFavorite(!isFavorite);
-  //         }
-  //       }
-
-  //       setLoading(false);
-
-  //       const { data: categoryBusinessData, error: categoryBusinessError } =
-  //         await supabase
-  //           .from("category_business")
-  //           .select("category(id,name)")
-  //           .eq("business_id", params.id);
-
-  //       if (categoryBusinessError) throw categoryBusinessError;
-  //       setCategories(categoryBusinessData);
-
-  //       const { data: reviewsBusinessData, error: reviewsBusinessError } =
-  //         await supabase
-  //           .from("reviews")
-  //           .select("*")
-  //           .eq("business_id", params.id)
-  //           .eq("status", "1")
-  //           .eq("isArchived", false);
-
-  //       if (reviewsBusinessError) throw reviewsBusinessError;
-  //       setReviews(reviewsBusinessData);
-  //       console.log(reviewsBusinessData);
-
-  //       const { data: statsData, error: statsError } = await supabase.rpc(
-  //         "get_rating_stats",
-  //         { business_id_param: params.id }
-  //       );
-
-  //       if (statsError) throw statsError;
-  //       console.log(statsData);
-  //       setStats(statsData);
-  //     } catch (error) {
-  //       console.log(error.message);
-  //     }
-  //   }
-
-  //   fetchBusinessDetails();
-  // }, [params.id, user]);
+  }, [params.id, user]);
 
   // status change dropdown code
   const [status, setStatus] = useState("0");
@@ -219,62 +138,67 @@ const Page = () => {
   const handleStatusChange = async (e) => {
     console.log(e.target.value);
     try {
-      const formdata={
-        approved:e.target.value,
-        id:business.id
-      }
-      const response = await fetch(`${serverurl}update-business-status/`,
-        {
-          headers :{ 'Content-Type': 'application/json' },
-          method: 'POST',
-          body: JSON.stringify(formdata),
-     
+      const { error } = await supabase
+        .from("business")
+        .update({ approved: e.target.value })
+        .eq("id", business.id);
+      if (error) throw error;
 
-      });
-      const result = await response.json();
-      if (response.ok) {
-      } else {
-        // setError(result.error || 'Failed to fetch status');
-      }
+      const notification_data = {
+        recevier_id: business.user_id,
+        notification_type: "business",
+        notification_operation:
+          e.target.value == "0"
+            ? "pending"
+            : e.target.value == "1"
+            ? "approve"
+            : "reject",
+        related_entity_id: business.id,
+      };
+      const { error: notification_error } = await supabase
+        .from("notification")
+        .insert(notification_data);
+      if (notification_error) throw notification_error;
     } catch (error) {
-      // setError('An unexpected error occurred');
-    } finally {
-      setLoading(false);
+      console.log(error);
     }
-    // try {
-    //   const { error } = await supabase
-    //     .from("business")
-    //     .update({ approved: e.target.value })
-    //     .eq("id", business.id);
-    //   if (error) throw error;
-    // } catch (error) {
-    //   console.log(error);
-    // }
   };
 
   // delete
-  
   const handleDelete = async () => {
     try {
-      const response = await fetch(`${serverurl}archive-business/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id: business.id }),
-      });
-  
-      const result = await response.json();
-      if (response.ok) {
-        router.push("/");
+      const { error } = await supabase
+        .from("business")
+        .update({ isArchived: true })
+        .eq("id", business.id);
+      if (error) throw error;
+
+      let notification_operation;
+      let recevier_id;
+      if (user_meta.role == "super_admin") {
+        notification_operation = "admin_delete";
+        recevier_id = business.user_id;
       } else {
-        console.error(result.ErrorMsg || 'Failed to archive business');
+        notification_operation = "user_delete";
+        recevier_id = "admin";
       }
+      const notification_data = {
+        recevier_id,
+        notification_type: "business",
+        notification_operation,
+        related_entity_id: business.id,
+      };
+      const { error: notification_error } = await supabase
+        .from("notification")
+        .insert(notification_data);
+      if (notification_error) throw notification_error;
+
+      router.push("/");
     } catch (error) {
-      console.error('An unexpected error occurred:', error);
+      console.log(error);
     }
   };
-  
+
   // favroite
   const toggleFavorite = async () => {
     try {
@@ -312,7 +236,7 @@ const Page = () => {
       ) : (
         <div>
           <div className="relative">
-            {(user_meta.role === 1 ||
+            {(user_meta.role === "super_admin" ||
               user.id == business.user_id) && (
               <div className="fixed z-10 right-5 top-[130px] flex gap-2 flex-wrap">
                 <button
@@ -330,7 +254,7 @@ const Page = () => {
                   <PencilIcon className="w-5 h-5" />
                 </Link>
 
-                {user_meta.role === 1 && (
+                {user_meta.role === "super_admin" && (
                   <div className="relative inline-block cursor-pointer">
                     <select
                       value={status}
@@ -368,12 +292,9 @@ const Page = () => {
             )}
 
             <ListTopBanner
-             img={business.images && business.images.length > 0 
-              ? `${serverurl}media/${business.images[0]}` 
-              : inner} 
-              // img={business.images ?`${serverurl}+'media/'`+ business.images.split(",")[0] : inner}
+              img={business.images ? business.images.split(",")[0] : inner}
               heading={business.name}
-              label={business.categories.length && business.categories[0].category__name}
+              label={categories.length && categories[0].category.name}
               website={business.website}
               call={business.phone}
               direction=""
@@ -478,7 +399,7 @@ const Page = () => {
               {business.discount_code && (
                 <div className="bg-white py-8 px-8 mb-4  rounded-3xl text-green-400">
                   {business.discount_message ? (
-                    <span className=""> 
+                    <span className="">
                       {business.discount_message
                         .split("[code]")
                         .map((part, index) => (
@@ -502,29 +423,8 @@ const Page = () => {
                   )}
                 </div>
               )}
-{business.images && business.images.length > 1 && (
-  <div className="bg-white mb-8 rounded-3xl">
-    <Swiper
-      pagination={{ clickable: true }}
-      modules={[Pagination]}
-      className="swipperMain w-full max-w-80 md:max-w-xl "
-    >
-      {business.images.map((img, index) => (
-        <SwiperSlide key={index}>
-          <Image
-            src={`${serverurl}media/${img}`}
-            className="flex rounded-md !w-full"
-            width={1000}
-            height={1000}
-            alt={`Image ${index + 1}`}
-          />
-        </SwiperSlide>
-      ))}
-    </Swiper>
-  </div>
-)}
 
-              {/* {business.images && business.images.split(",").length > 1 && (
+              {business.images && business.images.split(",").length > 1 && (
                 <div className="bg-white mb-8 rounded-3xl">
                   <Swiper
                     pagination={{ clickable: true }}
@@ -536,7 +436,7 @@ const Page = () => {
                         {img && (
                           <SwiperSlide key={index}>
                             <Image
-                              src={`${serverurl}+'media'`+img}
+                              src={img}
                               className="flex rounded-md !w-full"
                               width={1000}
                               height={1000}
@@ -548,7 +448,7 @@ const Page = () => {
                     ))}
                   </Swiper>
                 </div>
-              )} */}
+              )}
 
               <div className="bg-white p-8 rounded-3xl">
                 <h3 className="text-xl font-bold mb-3 text-text-color">
@@ -563,13 +463,13 @@ const Page = () => {
                 <p className="text-sm leading-6 mt-3">
                   <strong className="uppercase">Categories</strong>
                   <br />
-                  {business.categories.map((item, index) => (
+                  {categories.map((item, index) => (
                     <Link
-                      href={`/places/category/${item.category__id}`}
-                      key={item.category__id}
+                      href={`/places/category/${item.category.id}`}
+                      key={item.category.id}
                     >
-                      <span href={`/places/category/${item.category__id}`}>
-                        {item.category__name}
+                      <span href={`/places/category/${item.category.id}`}>
+                        {item.category.name}
                       </span>
                       {index < categories.length - 1 && ", "}
                     </Link>
@@ -618,22 +518,22 @@ const Page = () => {
                 )}
               </div>
 
-              {reviews?reviews.length > 0 && (
+              {reviews.length > 0 && (
                 <div className="bg-white p-8 rounded-3xl mt-7">
                   <div className="flex justify-between flex-wrap gap-3 items-center">
                     <h3 className="text-xl font-bold mb-3 text-text-color">
                       Customer Reviews
                     </h3>
                     <div className="flex justify-end flex-col">
-                      <StarRating rating={stats?.avg_rating} />
+                      <StarRating rating={stats[0]?.avg_rating} />
                       <h5 className="">
                         Rating{" "}
                         <span className="font-bold text-2xl">
-                          {stats?.avg_rating.toFixed(1)}
+                          {stats[0]?.avg_rating.toFixed(1)}
                         </span>
                         <span className="font-bold text-sm">/5.0</span> from{" "}
                         <span className="font-bold text-2xl">
-                          {stats?.total_count}
+                          {stats[0]?.total_count}
                         </span>{" "}
                         review(s)
                       </h5>
@@ -649,34 +549,33 @@ const Page = () => {
                             {review.title}
                           </h3>
                           <div className="pt-2 pb-4">{review.review}</div>
-{review.review_files &&
-  review.review_files.split(",").length > 0 && (
-    <div className="flex gap-3 flex-wrap">
-      {review.review_files
-        .split(",")
-        .map((img, i) => (
-          <>
-            {img && (
-              <Image
-                src={`${serverurl}${img.includes('/api/') ? img.replace('/api/', '') : img}`}
-                alt=""
-                key={i}
-                width={200}
-                height={200}
-                className="flex-grow-0 aspect-square rounded-sm"
-              />
-            )}
-          </>
-        ))}
-    </div>
-  )}
-
+                          {review.review_files &&
+                            review.review_files.split(",").length && (
+                              <div className="flex gap-3 flex-wrap">
+                                {review.review_files
+                                  .split(",")
+                                  .map((img, i) => (
+                                    <>
+                                      {img && (
+                                        <Image
+                                          src={img}
+                                          alt=""
+                                          key={i}
+                                          width={200}
+                                          height={200}
+                                          className="flex-grow-0 aspect-square rounded-sm"
+                                        />
+                                      )}
+                                    </>
+                                  ))}
+                              </div>
+                            )}
                         </div>
                       );
                     })}
                   </div>
                 </div>
-              ):[]}
+              )}
 
               <div className="bg-white mt-7 p-8 rounded-3xl">
                 <iframe
@@ -696,4 +595,4 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default BusinessId;

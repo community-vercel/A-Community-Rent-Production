@@ -1,7 +1,7 @@
 "use client";
 import SubHeaderComponent from "@/components/datatable-components/SubHeaderComponent";
 import Loader from "@/components/Loader";
-import { supabase } from "@/lib/supabase";
+import supabase  from "@/lib/supabase";
 import { EyeIcon, PencilSquareIcon } from "@heroicons/react/16/solid";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,7 +10,7 @@ import DataTable from "react-data-table-component";
 import { useSelector } from "react-redux";
 import { Bounce, toast } from "react-toastify";
 
-const Page = () => {
+const Reviews = () => {
   const router = useRouter();
   const { user, user_meta } = useSelector((state) => state.auth);
   const [loading, setLoading] = useState(false);
@@ -27,17 +27,17 @@ const Page = () => {
       name: "Business",
       selector: (row) => (
         <Link
-          href={`/places/category/business/${row.business__id}`}
+          href={`/places/category/business/${row.business.id}`}
           className="underline"
         >
-          {row.business__name}
+          {row.business.name}
         </Link>
       ),
       sortable: true,
     },
     {
       name: "User",
-      selector: (row) => row.user__name,
+      selector: (row) => row.user_email,
       sortable: true,
     },
     {
@@ -76,33 +76,35 @@ const Page = () => {
   );
 
   useEffect(() => {
-    if (!user && user_meta.role !== "1" || user_meta.role !== 1) router.push("/");
+    if (!user && (user_meta.role !== "super_admin" || user_meta.role !== "moderator")) router.push("/");
+    console.log(user_meta.role)
     getReviews();
   }, []);
 
   useEffect(() => {
-    if (!user && user_meta.role !== "1" || user_meta.role !== 1) router.push("/"); 
+    if (!user && (user_meta.role !== "super_admin" || user_meta.role !== "moderator")) router.push("/"); 
   }, [user]);
 
-  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
 
   const getReviews = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${serverurl}get-reviews/`);
-      const result = await response.json();
-      setReviews(result.data); 
+      const { data, error } = await supabase.from("reviews").select(`
+          *,
+          business (
+              id,
+              name
+          ) 
+      `).eq("isArchived", false);
+      if (error) throw error;
+      setReviews(data); 
     } catch (error) {
       console.log(error);
     } finally {
       setLoading(false);
     }
   };
-
-
-  useEffect(() => {
-    if ( user_meta.role !== 1) router.push("/");
-  }, [user_meta]);
+ 
 
 
    // select selected rows
@@ -110,129 +112,95 @@ const Page = () => {
     console.log(selectedRows);
     setSelectedRows(selectedRows);
   };
+
+  // select status change
   const selectStatus = async (e) => {
     try {
       console.log(e.target.value);
-      let updateArray = [];
+      let upddateArray = [];
+      let notification_operation = ''
+      let notification_operation_mod = "";
       if (e.target.value === "approve") {
-        updateArray = selectedRowsState.map((row) => ({
-          id: row.id,
-          status: "1",
-        }));
-      } else if (e.target.value === "pending") {
-        updateArray = selectedRowsState.map((row) => ({
-          id: row.id,
-          status: "0",
-        }));
-      } else if (e.target.value === "reject") {
-        updateArray = selectedRowsState.map((row) => ({
-          id: row.id,
-          status: "2",
-        }));
-      } else if (e.target.value === "delete") {
-        updateArray = selectedRowsState.map((row) => ({
-          id: row.id,
-          isArchived: true,
-        }));
-      }
-  
-      if (updateArray.length > 0) {
-        console.log(updateArray);
-  
-        const response = await fetch(`${serverurl}update-reviews/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updateArray),
+        upddateArray = selectedRowsState.map((row) => {
+          return { id: row.id, status: "1" };
         });
-  
-        const result = await response.json();
-        if (response.ok) {
-          getReviews();
-          setToggleClearRows(!toggledClearRows);
-          toast.success('Updated', {
-            position: "bottom-center",
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: false,
-            draggable: false,
-            progress: undefined,
-            theme: "light",
-            transition: Bounce,
+        notification_operation= "approve"
+        notification_operation_mod = "approve_moderator";
+      }
+      if (e.target.value === "pending") {
+        upddateArray = selectedRowsState.map((row) => {
+          return { id: row.id, status: "0" };
+        });
+        notification_operation= "pending"
+      }
+      if (e.target.value === "reject") {
+        upddateArray = selectedRowsState.map((row) => {
+          return { id: row.id, status: "2" };
+        });
+        notification_operation= "reject"
+      }
+      if (e.target.value === "delete") {
+        upddateArray = selectedRowsState.map((row) => {
+          return { id: row.id, isArchived: true };
+        });
+        notification_operation= "delete"
+      }
+
+      if (upddateArray.length > 0) {
+        console.log(upddateArray);
+
+        const { data, error } = await supabase
+          .from("reviews")
+          .upsert(upddateArray)
+          .select();
+
+        if(error) throw error
+
+        let notification_array = [];
+
+        selectedRowsState.forEach((row) => {
+          notification_array.push({
+            recevier_id:row.user_id,
+            notification_type:'reviews',
+            notification_operation,
+            related_entity_id:row.id
           });
-        } else {
-          toast.error(result.ErrorMsg || 'Failed to update reviews', {
-            position: "bottom-center",
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: false,
-            draggable: false,
-            progress: undefined,
-            theme: "light",
+        });
+
+        if (user_meta.role == "moderator") {
+          selectedRowsState.forEach((row) => {
+            notification_array.push({
+              recevier_id: "admin",
+              notification_type: "reviews",
+              notification_operation:notification_operation_mod,
+              related_entity_id: row.id,
+            });
           });
-        }
+        } 
+
+        const { error:notification_error } = await supabase
+        .from('notification')
+        .insert(notification_array)
+        if(notification_error) throw notification_error
+
+        getReviews()
+        setToggleClearRows(!toggledClearRows)
+        toast.success('Updated', {
+          position: "bottom-center",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: false,
+          draggable: false,
+          progress: undefined,
+          theme: "light",
+          transition: Bounce,
+          });
       }
     } catch (error) {
-      console.log(error);
+      console.log(error)
     }
   };
-  
-  // select status change
-  // const selectStatus = async (e) => {
-  //   try {
-  //     console.log(e.target.value);
-  //     let upddateArray = [];
-  //     if (e.target.value === "approve") {
-  //       upddateArray = selectedRowsState.map((row) => {
-  //         return { id: row.id, status: "1" };
-  //       });
-  //     }
-  //     if (e.target.value === "pending") {
-  //       upddateArray = selectedRowsState.map((row) => {
-  //         return { id: row.id, status: "0" };
-  //       });
-  //     }
-  //     if (e.target.value === "reject") {
-  //       upddateArray = selectedRowsState.map((row) => {
-  //         return { id: row.id, status: "2" };
-  //       });
-  //     }
-  //     if (e.target.value === "delete") {
-  //       upddateArray = selectedRowsState.map((row) => {
-  //         return { id: row.id, isArchived: true };
-  //       });
-  //     }
-
-  //     if (upddateArray.length > 0) {
-  //       console.log(upddateArray);
-
-  //       const { data, error } = await supabase
-  //         .from("reviews")
-  //         .upsert(upddateArray)
-  //         .select();
-
-  //       if(error) throw error
-  //       getReviews()
-  //       setToggleClearRows(!toggledClearRows)
-  //       toast.success('Updated', {
-  //         position: "bottom-center",
-  //         autoClose: 3000,
-  //         hideProgressBar: false,
-  //         closeOnClick: true,
-  //         pauseOnHover: false,
-  //         draggable: false,
-  //         progress: undefined,
-  //         theme: "light",
-  //         transition: Bounce,
-  //         });
-  //     }
-  //   } catch (error) {
-  //     console.log(error)
-  //   }
-  // };
 
   return (
     <>
@@ -253,7 +221,7 @@ const Page = () => {
                       <option className="cursor-pointer" value="none">
                         Actions
                       </option>
-                      {user_meta.role == 1 && (
+                      {user_meta.role == 'super_admin' && (
                         <>
                         <option className="cursor-pointer" value="approve">
                           Approve
@@ -266,9 +234,19 @@ const Page = () => {
                         </option>
                         </>
                       )}
-                      <option className="cursor-pointer" value="delete">
-                        Delete
-                      </option>
+                      {user_meta.role == "moderator" && (
+                        <> 
+                          <option className="cursor-pointer" value="approve">
+                            Approve
+                          </option>
+                        </>
+                      )}
+
+                      {user_meta.role != "moderator" && (
+                        <option className="cursor-pointer" value="delete">
+                          Delete
+                        </option>
+                      )}
                     </select>
                     <SubHeaderComponent
                       filterText={filterText}
@@ -294,4 +272,4 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default Reviews;

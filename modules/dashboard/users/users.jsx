@@ -1,6 +1,6 @@
 "use client";
-import { supabase } from "@/lib/supabase";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import  supabase  from "@/lib/supabase";
+import  supabaseAdmin  from "@/lib/supabaseAdmin";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
@@ -8,8 +8,8 @@ import DataTable from "react-data-table-component";
 import SubHeaderComponent from "@/components/datatable-components/SubHeaderComponent";
 import Loader from "@/components/Loader";
 import Link from "next/link";
-import { EyeIcon } from "@heroicons/react/16/solid";
-const Page = () => {
+
+const Users = () => {
   const { user } = useSelector((state) => state.auth);
   const router = useRouter();
 
@@ -28,7 +28,7 @@ const Page = () => {
     },
     {
       name: "Role",
-      selector: (row) => row.role===1?row='SuperAdmin':row.role===2?row.role='Admin':'User',
+      selector: (row) => row.role,
       sortable: true,
     },
     {
@@ -37,17 +37,9 @@ const Page = () => {
     },
     {
       name: "Actions",
-      cell: (row) => (
-        <>
-          <Link
-            href={`/dashboard/users/${row.id}`}
-            className="underline"
-          >
-            <EyeIcon className="w-5 h-5" />
-          </Link>
-        </>
-      ),
-    },
+      selector: (row) => <Link href={`/dashboard/users/${row.id}`}> View </Link>,
+      sortable: true,
+    }
   ];
 
   const handleOnChange = async (e, row) => {
@@ -73,67 +65,50 @@ const Page = () => {
     if (!user.id) return router.push("/");
     getAllUsers();
   }, []);
-  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
 
   useEffect(() => {
     if (!user.id) return router.push("/");
   }, [user]);
+
   const getAllUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${serverurl}get-all-users/`);
-      const result = await response.json();
-      if (response.ok) {
-        setUsers(result.data);
-      } else {
-        console.error(result.ErrorMsg);
-      }
+      const {
+        data: { users: usersData },
+        error,
+      } = await supabaseAdmin.auth.admin.listUsers();
+      if (error) throw error;
+      let authUsers = [...usersData];
+
+      const { data: users_meta, error: users_meta_error } = await supabase
+        .from("user_meta")
+        .select(`*`);
+      if (users_meta_error) throw users_meta_error;
+      let usersMeta = [...users_meta];
+
+      let transformedData = [];
+      usersMeta.forEach((meta) => {
+        authUsers.forEach((authUser) => {
+          if (meta.user_id == authUser.id && meta.role !== "super_admin") {
+            transformedData.push({
+              id: meta.user_id,
+              role: meta.role,
+              pre_approved: meta.pre_approved,
+              name: authUser.user_metadata.full_name,
+              email: authUser.email,
+            });
+          }
+        });
+      });
+
+      console.log(transformedData);
+      setUsers(transformedData);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.log(error);
     } finally {
       setLoading(false);
     }
   };
-  
-  // const getAllUsers = async () => {
-  //   try {
-  //     setLoading(true);
-  //     const {
-  //       data: { users: usersData },
-  //       error,
-  //     } = await supabaseAdmin.auth.admin.listUsers();
-  //     if (error) throw error;
-  //     let authUsers = [...usersData];
-
-  //     const { data: users_meta, error: users_meta_error } = await supabase
-  //       .from("user_meta")
-  //       .select(`*`);
-  //     if (users_meta_error) throw users_meta_error;
-  //     let usersMeta = [...users_meta];
-
-  //     let transformedData = [];
-  //     usersMeta.forEach((meta) => {
-  //       authUsers.forEach((authUser) => {
-  //         if (meta.user_id == authUser.id && meta.role !== "super_admin") {
-  //           transformedData.push({
-  //             id: meta.user_id,
-  //             role: meta.role,
-  //             pre_approved: meta.pre_approved,
-  //             name: authUser.user_metadata.full_name,
-  //             email: authUser.email,
-  //           });
-  //         }
-  //       });
-  //     });
-
-  //     console.log(transformedData);
-  //     setUsers(transformedData);
-  //   } catch (error) {
-  //     console.log(error);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
 
   return (
     <>
@@ -141,14 +116,6 @@ const Page = () => {
         <Loader />
       ) : (
         <div className="w-[95%] mx-auto pb-20">
-          <div className="flex justify-end flex-wrap my-6">
-            <Link
-              href="/dashboard/users/add"
-              className="bg-primary text-white text-center text-sm rounded-full py-2 px-9 border-8 border-white"
-            >
-              Add
-            </Link>
-          </div>
           <div className="mt-5">
             <DataTable
               title={
@@ -171,7 +138,7 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default Users;
 
 const CustomDropdown = ({ row, onChange }) => {
   const [status, setStatus] = useState(row.pre_approved || "false");

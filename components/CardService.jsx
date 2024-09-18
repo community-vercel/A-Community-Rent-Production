@@ -21,13 +21,22 @@ const CardService = ({business, user_id = null, favoritePageHide = null }) => {
   const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
 
   console.log("card usineees",business)
-
+  // const logoUrl = business.logo && business.logo.includes('/api/media/')
+  // ? business.logo.replace('/api/media/', 'media/')
+  // : business.logo;
+  const logoUrl = business.logo
+    ? business.logo.includes('/api/media/')
+      ? business.logo.replace('/api/media/', 'media/')
+      : business.logo.includes('media/')
+      ? business.logo
+      : `media/${business.logo}`
+    : '';
   useEffect(() => {
     async function getStats() {
       try {
-        if (business.business_id) {
+        if (business.business_id || business.id) {
           const formData = {
-            business_id_param: business.business_id
+            business_id_param: business.business_id?business.business_id:business.id,
           };
     
           const response = await fetch(`${serverurl}get-business-rating-stats/`, {
@@ -56,7 +65,7 @@ const CardService = ({business, user_id = null, favoritePageHide = null }) => {
               },
               body: JSON.stringify({
                 user_id: user_id,
-                business_id: business.business_id,
+                business_id:  business.business_id?business.business_id:business.id,
               }),
             });
       
@@ -138,7 +147,7 @@ const CardService = ({business, user_id = null, favoritePageHide = null }) => {
   
       if (favoritePageHide) {
         // If there's a function to handle hiding the favorite on the page, call it
-        favoritePageHide(business.business_id);
+        favoritePageHide(business.business_id?business.business_id:business.id);
   
         // Send a POST request to remove the favorite
         const response = await fetch(apiUrl, {
@@ -148,7 +157,7 @@ const CardService = ({business, user_id = null, favoritePageHide = null }) => {
           },
           body: JSON.stringify({
             user_id: user_id,
-            business_id: business.business_id,
+            business_id: business.business_id?business.business_id:business.id,
           }),
         });
   
@@ -164,7 +173,7 @@ const CardService = ({business, user_id = null, favoritePageHide = null }) => {
           },
           body: JSON.stringify({
             user_id: user_id,
-            business_id: business.business_id,
+            business_id: business.business_id?business.business_id:business.id,
           }),
         });
   
@@ -188,7 +197,8 @@ const CardService = ({business, user_id = null, favoritePageHide = null }) => {
         <ReceiptPercentIcon className="w-5 h-7" />
           <span>Offering Discounts</span>
         </div>}
-      <Link
+     
+     {business.business_id?<Link
         href={`/places/category/business/${business.business_id}`}
         className="flex justify-between items-start gap-4"
       >
@@ -209,12 +219,7 @@ const CardService = ({business, user_id = null, favoritePageHide = null }) => {
         </div>
         <div className=" ">
   <Image
-
-src={
-  business.logo && business.logo.includes('/api/media/')
-    ? `${serverurl}${business.logo.replace('/api/media/','media/')}` // Remove '/api/' and replace with correct path
-    : `${serverurl}media/${business.logo}` // Prepend 'media/' if not present
-}
+        src={`${serverurl}${logoUrl}`}
 
     className="w-[70px] min-w-[70px] h-[70px] object-cover rounded-full"
     alt=""
@@ -224,6 +229,40 @@ src={
 
         </div>
       </Link>
+      
+    :<Link
+    href={`/places/category/business/${business.id}`}
+    className="flex justify-between items-start gap-4"
+  >
+    <div className="">
+      <h2 className="text-base text-text-color mb-1 font-semibold">
+        {business.business_name}
+      </h2>
+      {business && business.description ? (
+<p className="text-sm text-[#050505] mb-5 break-all">
+{business.description.slice(0, 90) + '...'}
+</p>
+) : (
+<p className="text-sm text-[#050505] mb-5 break-all">
+
+</p>
+)}
+
+    </div>
+    <div className=" ">
+<Image
+    src={`${serverurl}${logoUrl}`}
+
+className="w-[70px] min-w-[70px] h-[70px] object-cover rounded-full"
+alt=""
+width={100}
+height={100}
+/>
+
+    </div>
+  </Link>
+    }
+      
       <ul className="mt-2 mb-7">
         {business.phone && (
           <li>
