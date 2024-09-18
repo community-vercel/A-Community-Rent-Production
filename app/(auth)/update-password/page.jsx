@@ -58,37 +58,59 @@ export default function Home() {
   //   }
   // }, [user, router]);
 
-  const onSubmit = async (formData) => { 
-    console.log("uid",uid,token)
-
+  const onSubmit = async (formData) => {
+  
+    
+  
     if (formData.password !== formData.confirmPassword) {
       setMessage("Password not matched");
       toast.error('Password not matched.', { position: "top-right" });
       return;
     }
+  
 
+  
     try {
       const requestBody = {
         newpassword: formData.password,
         uid: uid,
         token: token,
       };
-
-      await postApi(`${serverurl}confirm-reset/`, requestBody);
-
+  
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10-second timeout
+  
+      const response = await fetch(`${serverurl}confirm-reset/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal, // Pass the controller's signal to the fetch request
+      });
+  
+      clearTimeout(timeoutId);
+  
+      const data = await response.json();
+  
       if (data?.ErrorCode === 0) {
         toast.success('Password reset Successful.', { position: "top-right" });
         reset(); // Clear the form fields after success
         setMessage('Password reset Successful.');
-        router.push("/login")
+        router.push("/login");
       } else {
         setMessage(data?.ErrorMsg || 'Failed. Please try again.');
       }
     } catch (error) {
-      setMessage(error.message);
+      if (error.name === 'AbortError') {
+        setMessage('The request took too long, please try again later.');
+        toast.error('The request timed out. Please try again.', { position: "top-right" });
+      } else {
+        setMessage('An error occurred. Please try again.');
+        toast.error('An error occurred. Please try again.', { position: "top-right" });
+      }
       console.error("Update Password error", error);
-    }
+    } 
   };
+  
 
   return (
     <form className="max-w-lg mx-auto w-full" onSubmit={handleSubmit(onSubmit)}>

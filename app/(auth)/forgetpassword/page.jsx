@@ -14,7 +14,6 @@ import usePostApi from "@/hooks/usePostApis";
 import { ToastContainer, toast } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 
-
 import { supabase } from "@/lib/supabase";
 import { useState } from "react";
 
@@ -33,32 +32,70 @@ const Page = () => {
   );
   const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
   const { data, loading, error, postApi } = usePostApi();
-
   const onSubmit = async (formData) => {
-    console.log(formData,`${process.env.NEXT_PUBLIC_SITE_URL}update-password`);
-    try {
-      
+ 
+
     const requestBody = {
       email: formData.email,
     };
 
-      await postApi(`${serverurl}password-reset/`, requestBody);
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10-second timeout
 
-       if (data.ErrorCode === 0) {
-        toast.success('Password reset Instruction send to your email. Please check your email to reset your password.', { position: "top-right" }); // Show success toast
+      const response = await fetch(`${serverurl}password-reset/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,  // Pass the controller's signal to the fetch request
+      });
+
+      clearTimeout(timeoutId);
+
+      const data = await response.json();
+
+      if (data && data.ErrorCode === 0) {
+        toast.success('Password reset instructions sent to your email. Please check your email to reset your password.', { position: "top-right" });
 
         reset();  // Clear the email field after success
-  
-        setMessage('Password reset Instruction send to your email. Please check your email to reset your password.');
-            } else {
-                setMessage(data.ErrorMsg || 'Registration failed. Please try again.');
-            }
-          }
-   catch (error) {
-      setMessage(error.message);
-      console.error("Forget Password error", error);
+        setMessage('Password reset instructions sent to your email. Please check your email to reset your password.');
+      } else {
+        setMessage(data.ErrorMsg || 'Password reset failed. Please try again.');
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        setMessage('The request took too long, please try again later.');
+      } else {
+        setMessage('An error occurred. Please try again.');
+      }
+      console.error('Error:', error);
+    } finally {
+      setIsLoading(false);
     }
-  };
+};
+
+
+  // const onSubmit = async (formData) => {
+  //   console.log(formData,`${process.env.NEXT_PUBLIC_SITE_URL}update-password`);
+   
+  //   const requestBody = {
+  //     email: formData.email,
+  //   };
+
+  //     await postApi(`${serverurl}password-reset/`, requestBody);
+
+  //      if (data && data.ErrorCode === 0) {
+  //       toast.success('Password reset Instruction send to your email. Please check your email to reset your password.', { position: "top-right" }); // Show success toast
+
+  //       reset();  // Clear the email field after success
+  
+  //       setMessage('Password reset Instruction send to your email. Please check your email to reset your password.');
+  //           } else {
+  //               setMessage(data.ErrorMsg || 'Registration failed. Please try again.');
+  //           }
+          
+ 
+  // };
 
   return (
     <form className="max-w-lg mx-auto w-full" onSubmit={handleSubmit(onSubmit)}>

@@ -67,7 +67,7 @@ const Page = () => {
       const result = await response.json();
       
       if (result.ErrorCode === 0) {
-        setCategory(result.data[0].category_name || "New"); // Assuming category name exists
+        setCategory(result.data[0]); // Assuming category name exists
         setBusinesses(result.data.filter((item) => item.business_id != null));
         setPage(page + 1);
       } else {
@@ -357,9 +357,9 @@ const Page = () => {
           <TopBanner
             invert
             back
-            img={category.cover ? `${serverurl}media/`+category.cover : BB}
+            img={category ? `${serverurl}media/`+category.cover : BB}
             label="Free Listing"
-            heading={category}
+            heading={category?category.category_name:"Category"}
             btnTxt={
               <>
                 + List your business <span className="font-bold">for free</span>

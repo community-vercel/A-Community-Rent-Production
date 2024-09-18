@@ -209,9 +209,13 @@ const CardService = ({business, user_id = null, favoritePageHide = null }) => {
         </div>
         <div className=" ">
   <Image
-    src={business.logo && business.logo.includes('media') ? 
-      `${serverurl}${business.logo}` : 
-      `${serverurl}media/${business.logo}`}
+
+src={
+  business.logo && business.logo.includes('/api/media/')
+    ? `${serverurl}${business.logo.replace('/api/media/','media/')}` // Remove '/api/' and replace with correct path
+    : `${serverurl}media/${business.logo}` // Prepend 'media/' if not present
+}
+
     className="w-[70px] min-w-[70px] h-[70px] object-cover rounded-full"
     alt=""
     width={100}
