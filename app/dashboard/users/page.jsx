@@ -141,6 +141,14 @@ const Page = () => {
         <Loader />
       ) : (
         <div className="w-[95%] mx-auto pb-20">
+          <div className="flex justify-end flex-wrap my-6">
+            <Link
+              href="/dashboard/users/add"
+              className="bg-primary text-white text-center text-sm rounded-full py-2 px-9 border-8 border-white"
+            >
+              Add
+            </Link>
+          </div>
           <div className="mt-5">
             <DataTable
               title={

@@ -26,6 +26,8 @@ const Page = () => {
   const [business, setBusiness] = useState([]);
   const [categories, setCategories] = useState([]);
   const [reviews, setReviews] = useState([]);
+  console.log("Status",reviews)
+
   const [stats, setStats] = useState({});
   console.log("Status",stats)
   const [isFavorite, setIsFavorite] = useState(false);
@@ -76,7 +78,7 @@ const Page = () => {
           console.log("system owner");
         } else if (data.approved !== 1 || data.approved !== "1 " ) {
           console.log("not approved");
-          router.push("/");
+          // router.push("/");
         } else {
           console.log("approved");
         }
@@ -647,27 +649,28 @@ const Page = () => {
                             {review.title}
                           </h3>
                           <div className="pt-2 pb-4">{review.review}</div>
-                          {review.review_files &&
-                            review.review_files.split(",").length && (
-                              <div className="flex gap-3 flex-wrap">
-                                {review.review_files
-                                  .split(",")
-                                  .map((img, i) => (
-                                    <>
-                                      {img && (
-                                        <Image
-                                          src={`${serverurl}`+img}
-                                          alt=""
-                                          key={i}
-                                          width={200}
-                                          height={200}
-                                          className="flex-grow-0 aspect-square rounded-sm"
-                                        />
-                                      )}
-                                    </>
-                                  ))}
-                              </div>
-                            )}
+{review.review_files &&
+  review.review_files.split(",").length > 0 && (
+    <div className="flex gap-3 flex-wrap">
+      {review.review_files
+        .split(",")
+        .map((img, i) => (
+          <>
+            {img && (
+              <Image
+                src={`${serverurl}${img.includes('/api/') ? img.replace('/api/', '') : img}`}
+                alt=""
+                key={i}
+                width={200}
+                height={200}
+                className="flex-grow-0 aspect-square rounded-sm"
+              />
+            )}
+          </>
+        ))}
+    </div>
+  )}
+
                         </div>
                       );
                     })}

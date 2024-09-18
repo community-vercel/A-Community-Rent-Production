@@ -34,11 +34,27 @@ const[message,setMessage]=useState("");
   const [stateid, setstateid] = useState(0);
   const [selectedState, setSelectedState] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
+  const [tags, setTags] = useState([]);
+const [currentTag, setCurrentTag] = useState('');
+
+const handleKeyDown = (e) => {
+  if (e.key === 'Enter' && currentTag.trim() !== '') {
+    e.preventDefault();
+    if (!tags.includes(currentTag.trim())) {
+      setTags([...tags, currentTag.trim()]);
+      setCurrentTag('');
+    }
+  }
+};
+
+const removeTag = (index) => {
+  setTags(tags.filter((_, i) => i !== index));
+};
 
   const [categories, setCategories] = useState(null); //data coming from category tabel stored
   const [selectedCategories, setSelectedCategories] = useState(null); // local selected form data stored
   const selectInputRef = useRef();
-
+console.log("Current Tags",tags)
   const [logo, setLogo] = useState(null);
   const [images, setImages] = useState(null);
   const [imagesSelected, setImagesSelected] = useState([]);
@@ -252,7 +268,9 @@ const[message,setMessage]=useState("");
 
         // Append categories and tags
         selectedCategories.forEach(cat => formDataToSend.append('categories', cat.value));
-        formDataToSend.append('b_tags', formData.b_tags);
+        const tagsString = tags.join(","); // Convert tags array to comma-separated string
+
+        formDataToSend.append('b_tags', tagsString);
 
         // Append logo and images
         formDataToSend.append('logo', logo[0]);
@@ -646,16 +664,37 @@ const[message,setMessage]=useState("");
           </div>
         )}
 
-        <div className="mt-5">
-          <Formlabel text="Tags (comma seperated)" forLabel="b_tags" />
-          <InputField
-            inputId="b_tags"
-            inputName="b_tags"
-            inputType="textarea"
-            register={register}
-            error={""}
-          ></InputField>
-        </div>
+<div className="mt-5">
+  <label htmlFor="b_tags" className="block text-sm font-medium text-gray-700">
+    Tags
+  </label>
+  <div className="mt-1 flex flex-wrap gap-2 border border-gray-300 rounded-md p-2 bg-white">
+    {tags.map((tag, index) => (
+      <span key={index} className="bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded-full">
+        {tag}
+        <button
+          type="button"
+          onClick={() => removeTag(index)}
+          className="ml-2 text-blue-500 hover:text-blue-700"
+        >
+          &times;
+        </button>
+      </span>
+    ))}
+    <input
+      id="b_tags"
+      name="b_tags"
+      type="text"
+      value={currentTag}
+      onChange={(e) => setCurrentTag(e.target.value)}
+      onKeyDown={handleKeyDown}
+      className="flex-1 outline-none p-1"
+      placeholder="Add a tag and press Enter"
+    />
+  </div>
+</div>
+
+
 
         <button
           type="submit"

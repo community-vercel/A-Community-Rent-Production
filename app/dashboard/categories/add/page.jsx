@@ -58,8 +58,9 @@ console.log("Auth",auth)
       const result = await response.json();
 
       if (response.ok) {
-        toast.success(result.message, { position: "top-right" }); // Show success toast
-        setMessage(result.message);
+        
+        toast.success(result.ErrorMsg, { position: "top-right" }); // Show success toast
+        setMessage(result.ErrorMsg);
         router.push('/')
         // Reset form or redirect as needed
       } else {

@@ -90,7 +90,7 @@ export default function Home() {
   
       const data = await response.json();
   
-      if (data?.ErrorCode === 0) {
+      if (data?.ErrorCode === 0 || data.ErrorCode === '0') {
         toast.success('Password reset Successful.', { position: "top-right" });
         reset(); // Clear the form fields after success
         setMessage('Password reset Successful.');

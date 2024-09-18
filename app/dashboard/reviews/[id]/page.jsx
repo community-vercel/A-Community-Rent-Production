@@ -28,10 +28,10 @@ const Page = () => {
   const [review, setReview] = useState({});
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("0");
-
   const { user, user_meta } = useSelector((state) => state.auth);
 
   const router = useRouter();
+  const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
 
   useEffect(() => {
     getReview();
@@ -39,33 +39,79 @@ const Page = () => {
   const getReview = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("reviews")
-        .select(
-          `
-              *,
-              business (
-                  id,
-                  name
-              ) 
-          `
-        )
-        .eq("id", params.id)
-        .single();
-      if (error) throw error;
+      const formdata={
+        id:params.id
+      }
+      const response = await fetch(`${serverurl}get-specificreview/`,{
+        headers: {
+          'Content-Type': 'application/json',
+        },
+method:"POST",
+body:JSON.stringify(formdata)
+
+
+
+      }); // Django API endpoint
+      if (!response.ok) throw new Error("Failed to fetch review");
+
+      const result = await response.json();
+      if (result.status === "error") throw new Error(result.error);
+
+      const data = result.data;
+
+      // Set review data in state and form
       setReview(data);
       setStatus(data.status);
 
+      // Use react-hook-form's setValue to populate the form fields
       setValue("title", data.title);
       setValue("rating", data.rating);
       setValue("review", data.review);
-      setImagesDB(data.review_files);
-    } catch (error) {
-      console.log(error);
+      const sanitizedReviewFiles = data.review_files
+      ? data.review_files.replace("/api/media/", "media/") // Remove '/api' from the string if present
+      : "";
+    console.log("sanitized",sanitizedReviewFiles)
+    setImagesDB(data.review_files || []);    } catch (error) {
+      console.error(error.message);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (params.id) getReview(); // Fetch review only when id is available
+  }, [params.id]);
+
+  // const getReview = async () => {
+  //   setLoading(true);
+  //   try {
+  //     const { data, error } = await supabase
+  //       .from("reviews")
+  //       .select(
+  //         `
+  //             *,
+  //             business (
+  //                 id,
+  //                 name
+  //             ) 
+  //         `
+  //       )
+  //       .eq("id", params.id)
+  //       .single();
+  //     if (error) throw error;
+  //     setReview(data);
+  //     setStatus(data.status);
+
+  //     setValue("title", data.title);
+  //     setValue("rating", data.rating);
+  //     setValue("review", data.review);
+  //     setImagesDB(data.review_files);
+  //   } catch (error) {
+  //     console.log(error);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   //   status dropdown
   const options = [
@@ -90,7 +136,7 @@ const Page = () => {
   const [images, setImages] = useState([]);
   const [imagesDB, setImagesDB] = useState([]);
   const [customErrors, setCustomErrors] = useState({});
-
+console.log("image",imagesDB)
   const {
     register,
     handleSubmit,
@@ -103,97 +149,174 @@ const Page = () => {
   });
   const onSubmit = async (formData) => {
     try {
+      const existingImages = imagesDB ? imagesDB.split(",") : [];
+    
       let reviewData = {
+        id: params.id,
         title: formData.title,
         review: formData.review,
         rating: formData.rating,
+        review_files: existingImages.join(","),  // Existing image URLs
       };
-      const { data: r_data, error: r_error } = await supabase
-        .from("reviews")
-        .update(reviewData)
-        .eq("id", params.id);
-      if (r_error) throw r_error;
-      console.log("review_updated");
-
-      if (images) {
-        // upload review images
-        const uploadReviewImages = await uploadImage(
-          params.id,
-          images,
-          "reviews",
-          `${params.id}/`
-        );
-        if (uploadReviewImages.error) throw uploadReviewImages.error;
-        console.log(uploadReviewImages);
-        let imagesUploadArr = uploadReviewImages
-          .map((img) => img.url)
-          .join(",");
-        console.log(imagesUploadArr);
-        if (imagesDB.split(",").length > 0)
-          imagesUploadArr = imagesUploadArr + "," + imagesDB;
-
-        // updating reviews table with images url
-        const { data: updateImgsData, error: updateImgsError } = await supabase
-          .from("reviews")
-          .update({ review_files: imagesUploadArr })
-          .eq("id", params.id)
-          .select();
+    
+      const formDataToSend = new FormData();
+      formDataToSend.append('reviewData', JSON.stringify(reviewData));
+    
+      if (images.length > 0) {
+        images.forEach((image) => {
+          formDataToSend.append('images', image);  // New images
+        });
       }
-
+    
+      const response = await fetch(`${serverurl}update-reviewdata/`, {
+        method: 'POST',
+        body: formDataToSend,
+      });
+    
+      const result = await response.json();
+      if (!response.ok || result.ErrorCode !== 0) {
+        throw new Error(result.ErrorMsg || 'Failed to update review');
+      }
+    
+      console.log("Review updated successfully");
       getReview();
       setEdit(false);
-      setImages([])
+      setImages([]);  // Clear the image state
     } catch (error) {
-      console.log(error);
+      console.log("Error:", error);
     }
   };
+  
+
+  
 
   // delete
   const handleDelete = async () => {
     try {
-      const { error } = await supabase
-        .from("reviews")
-        .update({ isArchived: true })
-        .eq("id", params.id);
-      if (error) throw error;
-      router.push("/dashboard/reviews");
+      // Prepare the data to send to the Django API
+      const updateData = [{
+        id: params.id,
+        status: status,  // Assuming '4' corresponds to 'archived' or similar status in your model
+        isArchived: true
+      }];
+  
+      const response = await fetch(`${serverurl}update-reviews/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      });
+  
+      const result = await response.json();
+      if (response.ok) {
+        if (result.ErrorCode === 0) {
+          // Success: Redirect to reviews dashboard or show success message
+          router.push("/dashboard/reviews");
+        } else {
+          // Handle error from the API
+          console.error(result.ErrorMsg);
+        }
+      } else {
+        // Handle server-side error
+        throw new Error(result.ErrorMsg || 'Failed to update review');
+      }
     } catch (error) {
-      console.log(error);
+      console.log("Error updating review:", error);
     }
   };
-
-  // img delete
+  
+  // const handleDelete = async () => {
+  //   try {
+  //     const { error } = await supabase
+  //       .from("reviews")
+  //       .update({ isArchived: true })
+  //       .eq("id", params.id);
+  //     if (error) throw error;
+  //     router.push("/dashboard/reviews");
+  //   } catch (error) {
+  //     console.log(error);
+  //   }
+  // };
   const imgDelete = async (name) => {
     console.log(name);
-    console.log([...imagesDB.split(","), ...images])
-    if (name.includes("http")) {
+    console.log([...imagesDB.split(","), ...images]);
+  
+    if (name.includes("/api/media/")) {
       try {
-        setImagesDB( [...imagesDB.split(",").filter((img) => img !== name)].join(",") );
-        const oldUrl = extractImagePath(name).replace("reviews/", "");
-        const { data: oldUrlData, error: oldUrlError } = await supabase.storage
-          .from("reviews")
-          .remove([oldUrl]);
-        if (oldUrlError) throw oldUrlError;
-        const { data: updateImagesData, error: updateImagesError } =
-          await supabase
-            .from("reviews")
-            .update({
-              review_files: [
-                ...imagesDB.split(",").filter((img) => img !== name),
-              ].join(","),
-            })
-            .eq("id", params.id)
-            .select();
-        if (updateImagesError) throw updateImagesError;
-        console.log([...imagesDB.split(",").filter((img) => img !== name)].join(","));
+        console.log("new name:");
+
+        // Remove the base URL from the image name (if necessary)
+        const cleanName = name.replace(serverurl, "");
+  console.log("new nmam",cleanName)
+        // Call the Django API to delete the image
+        const formData = new FormData();
+        formData.append("review_id", params.id); // Send the review ID
+        formData.append("image_url", cleanName); // Send the image URL
+  
+        const response = await fetch(`${serverurl}delete-review-image/`, {
+          method: "POST",
+          body: formData,
+        });
+  
+        if (!response.ok) {
+          throw new Error("Failed to delete image from the server");
+        }
+  
+        const result = await response.json();
+        if (result.error) {
+          throw new Error(result.error);
+        }
+  
+        // Update the front-end state after successful deletion
+        setImagesDB(
+          [...imagesDB.split(",").filter((img) => img !== cleanName)].join(",")
+        );
+        
+        console.log(result.message); // Successfully deleted message
       } catch (error) {
-        console.log('img del',error)
+        console.log("Error deleting image:", error);
       }
     } else {
-      setImages(images.filter((file) => file.name != name));
+      // Handle removal of newly uploaded images
+      setImages(images.filter((file) => file.name !== name));
     }
+  
     console.log(images);
   };
+   
+  // img delete
+  // const imgDelete = async (name) => {
+  //   console.log(name);
+  //   console.log([...imagesDB.split(","), ...images])
+  //   if (name.includes("http")) {
+  //     try {
+  //       setImagesDB( [...imagesDB.split(",").filter((img) => img !== name)].join(",") );
+  //       const oldUrl = extractImagePath(name).replace("reviews/", "");
+  //       const { data: oldUrlData, error: oldUrlError } = await supabase.storage
+  //         .from("reviews")
+  //         .remove([oldUrl]);
+  //       if (oldUrlError) throw oldUrlError;
+  //       const { data: updateImagesData, error: updateImagesError } =
+  //         await supabase
+  //           .from("reviews")
+  //           .update({
+  //             review_files: [
+  //               ...imagesDB.split(",").filter((img) => img !== name),
+  //             ].join(","),
+  //           })
+  //           .eq("id", params.id)
+  //           .select();
+  //       if (updateImagesError) throw updateImagesError;
+  //       console.log([...imagesDB.split(",").filter((img) => img !== name)].join(","));
+  //     } catch (error) {
+  //       console.log('img del',error)
+  //     }
+  //   } else {
+  //     setImages(images.filter((file) => file.name != name));
+  //   }
+  //   console.log(images);
+  // };
 
   return (
     <>
@@ -202,7 +325,7 @@ const Page = () => {
       ) : (
         <div className="max-w-xl bg-white my-3 mx-auto">
           <div className="p-4 mb-3 border-b-2">
-            {user_meta.role === "super_admin" && (
+            {user_meta.role ===1 && (
               <div className="flex justify-between  mt-3 mb-5">
                 {!edit ? (
                 <div className="relative inline-block cursor-pointer">
@@ -330,47 +453,51 @@ const Page = () => {
                     name="images"
                     multiple
                   />
-                  {(imagesDB || images.length > 0) && (
-                    <div className="">
-                      <span className="inline-block mt-4 mb-1">
-                        Current Images:
-                      </span>
-                      <div className="flex gap-4 items-center flex-wrap">
-                        {[...imagesDB.split(","), ...images].map(
-                          (item, index) => (
-                            <>
-                              {item && (
-                                <div className="relative h-full" key={index}>
-                                  <Image
-                                    key={index}
-                                    src={
-                                      typeof item == "string"
-                                        ? item
-                                        : URL.createObjectURL(item)
-                                    }
-                                    alt=""
-                                    className="aspect-square rounded-sm  bg-white d-flex p-1"
-                                    width={180}
-                                    height={180}
-                                  />
-                                  <XMarkIcon
-                                    className="w-4 h-4 absolute top-3 right-2 cursor-pointer bg-white text-black rounded-full"
-                                    onClick={() =>
-                                      imgDelete(
-                                        typeof item == "string"
-                                          ? item
-                                          : item.name
-                                      )
-                                    }
-                                  />
-                                </div>
-                              )}
-                            </>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  )}
+               {(imagesDB || images.length > 0) && (
+  <div className="">
+    <span className="inline-block mt-4 mb-1">Current Images:</span>
+    <div className="flex gap-4 items-center flex-wrap">
+      {[...imagesDB.split(","), ...images].map((item, index) => {
+        // Clean image path if it's a string and contains '/api'
+        const cleanItem = typeof item === "string" && item.includes("/api/")
+          ? item.replace("/api/", "")
+          : item;
+
+        return (
+          <>
+            {cleanItem && (
+              <div className="relative h-full" key={index}>
+                <Image
+                  key={index}
+                  src={
+                    typeof cleanItem === "string"
+                      ? serverurl + cleanItem
+                      : URL.createObjectURL(cleanItem) // For new image files
+                  }
+                  alt=""
+                  className="aspect-square rounded-sm bg-white d-flex p-1"
+                  width={180}
+                  height={180}
+                />
+                <XMarkIcon
+                  className="w-4 h-4 absolute top-3 right-2 cursor-pointer bg-white text-black rounded-full"
+                  onClick={() =>
+                    imgDelete(
+                      typeof cleanItem === "string"
+                        ? item
+                        : cleanItem.name // Handle deletion
+                    )
+                  }
+                />
+              </div>
+            )}
+          </>
+        );
+      })}
+    </div>
+  </div>
+)}
+
                   {customErrors.images && (
                     <span className="text-red-400 text-sm pl-1">
                       {customErrors.images}
@@ -406,7 +533,7 @@ const Page = () => {
                     {review.business?.name}
                   </Link>
                   <br />
-                  By: <Link href={""}> {review.user_email}</Link>
+                  By: <Link href={""}> {review.email}</Link>
                 </div>
                 <StarRating rating={review.rating} />
                 <h3 className="text-xl font-bold capitalize pt-1">
@@ -414,24 +541,29 @@ const Page = () => {
                 </h3>
                 <div className="pt-2 pb-4">{review.review}</div>
                 {review.review_files &&
-                  review.review_files.split(",").length && (
+                  review.review_files.split(",").length && 
                     <div className="flex gap-3 flex-wrap">
-                      {review.review_files.split(",").map((img, i) => (
-                        <>
-                          {img && (
-                            <Image
-                              src={img}
-                              alt=""
-                              key={i}
-                              width={200}
-                              height={200}
-                              className="flex-grow-0 aspect-square rounded-sm"
-                            />
-                          )}
-                        </>
-                      ))}
+                     {review.review_files.split(",").map((img, i) => {
+  // Check if the img contains '/api' and remove it
+  const cleanImg = img.includes("/api/media/") ? img.replace("/api/", "") : img;
+  return (
+    <>
+      {cleanImg && (
+        <Image
+          src={serverurl+cleanImg} // Use cleaned img path
+          alt=""
+          key={i}
+          width={200}
+          height={200}
+          className="flex-grow-0 aspect-square rounded-sm"
+        />
+      )}
+    </>
+  );
+})}
+
                     </div>
-                  )}
+                  }
               </>
             )}
           </div>

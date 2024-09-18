@@ -54,9 +54,9 @@ const ReviewsForm = ({
         formData.append('images', image);
       });
       const response = await fetch(`${serverurl}create-review/`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        // headers: {
+        //   'Content-Type': 'application/json',
+        // },
         
         method: 'POST',
         body: formData,

@@ -45,7 +45,7 @@ export default function Home() {
 
   useEffect(() => {
     if(data){
-      if (data.ErrorCode === 0) {
+      if (data.ErrorCode === 0 || data.ErrorCode === '0') {
         // Set the user details in the Redux store
         // dispatch(setUser({ user: data.user }));
         // dispatch(setSession({ session: data.session }));

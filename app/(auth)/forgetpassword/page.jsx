@@ -56,7 +56,7 @@ const Page = () => {
 
       const data = await response.json();
 
-      if (data && data.ErrorCode === 0) {
+      if (data && data.ErrorCode==="0"|| data.ErrorCode===0) {
         toast.success('Password reset instructions sent to your email. Please check your email to reset your password.', { position: "top-right" });
 
         reset();  // Clear the email field after success

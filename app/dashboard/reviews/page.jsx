@@ -37,7 +37,7 @@ const Page = () => {
     },
     {
       name: "User",
-      selector: (row) => row.email,
+      selector: (row) => row.user__name,
       sortable: true,
     },
     {

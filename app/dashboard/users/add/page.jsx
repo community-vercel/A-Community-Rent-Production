@@ -11,8 +11,7 @@ import { useSelector } from "react-redux";
 import { UserZod } from "@/zod/UserZod";
 import { ToastContainer, toast } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
-import AddressInput from "@/components/AdressInput";
-const Id = () => {
+const Page = () => {
   const params = useParams();
   const { user, user_meta } = useSelector((state) => state.auth);
   const [active, setActive] = useState(false);
@@ -20,7 +19,6 @@ const Id = () => {
   const [role, setRole] = useState();
   const [rolesFromApi, setRolesFromApi] = useState([]);
   const [checkedRoles, setCheckedRoles] = useState({});
-  const [address, setAddress] = useState('');
 
   const router = useRouter();
   const { register, handleSubmit, formState: { errors }, setValue } = useForm({
@@ -29,9 +27,7 @@ const Id = () => {
 
   // Hardcoded roles
   const hardcodedRoles = ["events", "business", "community", "rent", "job"];
-  const handleAddressSelected = (place) => {
-    setAddress(place.formatted_address);
-  };
+
   // Initialize checkboxes based on API roles and hardcoded roles
   useEffect(() => {
     if (rolesFromApi.length) {
@@ -56,37 +52,11 @@ const Id = () => {
     if (!user.id || user_meta.role !== 1) {
       router.push("/");
     }
-    fetchUserDetails();
   }, []);
 
   const serverurl = process.env.NEXT_PUBLIC_DJANGO_URL;
 
-  const fetchUserDetails = async () => {
-    const formdata = { id: params.id };
-    try {
-      const response = await fetch(`${serverurl}get-users/`, {
-        headers: { 'Content-Type': 'application/json' },
-        method: 'POST',
-        body: JSON.stringify(formdata)
-      });
-      const result = await response.json();
-      if (response.ok) {
-        setValue("phone", result.data?.phone);
-        setValue("address", result.data?.address);
-        // setValue("role", result.data?.role || '');
-        setRole(result.data?.role || '');
-        setRolesFromApi(result.data?.roles || []); // Set roles from API
-        setActive(result.data?.active || false);
-        setValue("email", result.data?.email);
-        setValue("name", result.data?.fullname);
-        setLoading(false);
-      } else {
-        console.error(result.ErrorMsg);
-      }
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    }
-  };
+ 
 
   const onSubmit = async (formData) => {
     console.log(formData, checkedRoles);
@@ -99,35 +69,7 @@ const Id = () => {
     };
   
     try {
-      if (params.id) {
-        // If params.id is present, update the existing user
-        const response = await fetch(`${serverurl}update-user/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(requestBody),
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-          console.log('User updated successfully:', result);
-
-          if(result.ErrorCode==="0"|| result.ErrorCode===0){
-            toast.success(result.ErrorMsg, { position: "top-right" }); // Show success toast
-
-            router.push('/dashboard/users')
-
-        }
-          // Handle successful update, e.g., show a success message and redirect
-        } else {
-          toast.error(result.ErrorMsg, { position: "top-right" }); // Show success toast
-
-          // Handle the error
-        }
-      } else {
-        // If params.id is not present, create a new user
+     
         const response = await fetch(`${serverurl}add-user/`, {
           method: 'POST',
           headers: {
@@ -139,13 +81,21 @@ const Id = () => {
         const result = await response.json();
         
         if (response.ok) {
+            if(result.ErrorCode==="0"|| result.ErrorCode===0){
+                toast.success(result.ErrorMsg, { position: "top-right" }); // Show success toast
+    
+                router.push('/dashboard/users')
+    
+            }
           console.log('User created successfully:', result);
           // Handle successful creation, e.g., show a success message and redirect
         } else {
+            toast.error(result.ErrorMsg, { position: "top-right" }); // Show success toast
+
           console.error('Error creating user:', result.ErrorMsg);
           // Handle the error
         }
-      }
+      
     } catch (error) {
       console.error('Error in form submission:', error);
       // Handle the error
@@ -154,10 +104,8 @@ const Id = () => {
   
 
   return (
-    <>
-      {loading ? (
-        <Loader />
-      ) : (
+
+     
         <div className="p-7 bg-white">
           <h1 className="text-2xl font-bold mb-8">User Detail</h1>
           <form className="w-full" onSubmit={handleSubmit(onSubmit)}>
@@ -169,7 +117,7 @@ const Id = () => {
                 inputType="email"
                 register={register}
                 error={errors.email}
-                disabled
+                
               >
                 <EnvelopeIcon />
               </InputField>
@@ -200,7 +148,6 @@ const Id = () => {
                 <PhoneIcon />
               </InputField>
             </div>
-            
 
             <div className="mb-5">
               <Formlabel text="Registered as:" />
@@ -252,16 +199,8 @@ const Id = () => {
                 className="mb-3"
               />
             </div>
-            <div className="mb-5">
-              <Formlabel text="Address" />
-              <AddressInput onAddressSelected={handleAddressSelected} />
-              <input
-                type="hidden"
-                name="address"
-                value={address}
-              />
-            </div>
-            {/* <div className="">
+
+            <div className="">
               <Formlabel text="Address" forLabel="address" />
               <InputField
                 inputId="address"
@@ -272,7 +211,7 @@ const Id = () => {
               >
                 <MapPinIcon />
               </InputField>
-            </div> */}
+            </div>
 
             <button
               type="submit"
@@ -282,9 +221,8 @@ const Id = () => {
             </button>
           </form>
         </div>
-      )}
-    </>
+     
   );
 };
 
-export default Id;
+export default Page;
