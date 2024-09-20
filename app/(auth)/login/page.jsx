@@ -23,6 +23,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { google } from "@/assets";
+import { Bounce, toast } from "react-toastify";
+
 
 export default function Home() {
   const router = useRouter();
@@ -42,6 +44,23 @@ export default function Home() {
 
   const [checkIfRoleExits, setCheckIfRoleExits] = useState(true);
   const [checkboxRole, setCheckboxRole] = useState('user');
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Client-side code
+      toast.success('Toast notification works!', {
+        position: "bottom-center",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+        theme: "light",
+      });
+    }
+  }, []);
+  
+
 
   useEffect(() => {
     if (user && user.id && user_meta.role===1) {
@@ -68,28 +87,87 @@ export default function Home() {
         },
         body: JSON.stringify(payload),
       });
-
-      if (!response.ok) {
-        throw new Error('Login failed');
-      }
-
       const data = await response.json();
-      console.log('Login successful:', data);
+
+
+
+
+
+console.log("Response",data)
+      // if (!response.ok) {
+        
+      //     toast.error(data.ErrorMsg || 'Failed to Login', {
+      //       position: "bottom-center",
+      //       autoClose: 3000,
+      //       hideProgressBar: false,
+      //       closeOnClick: true,
+      //       pauseOnHover: false,
+      //       draggable: false,
+      //       progress: undefined,
+      //       theme: "light",
+      //     });
+       
+      //   throw new Error('Login failed');
+      // }
+
+if(data.ErrorCode==0 || data.ErrorCode=='0' ){
+  toast.success('Login Sucessfully', {
+    position: "bottom-center",
+    autoClose: 3000,
+    hideProgressBar: false,
+    closeOnClick: true,
+    pauseOnHover: false,
+    draggable: false,
+    progress: undefined,
+    theme: "light",
+    transition: Bounce,
+  });
+ 
+ 
       dispatch(setUser({ user: data.user }));
       dispatch(setSession({ session: data.session }));
       dispatch(setIsAuthenticated({ isAuthenticated: true }));
       dispatch(setUserMeta({ user_meta: data.user_meta }));
+      if(data.user.role == '1'){
+        router.push("/dashboard/business");
+      } if(usermetaData.role == '3'){
+        router.push("/places");
+      }
+    router.push("/");
+}
+
+else{
+  setMessage(data.ErrorMsg)
+  toast.error(data.ErrorMsg || 'Failed to Login', {
+    position: "bottom-center",
+    autoClose: 3000,
+    hideProgressBar: false,
+    closeOnClick: true,
+    pauseOnHover: false,
+    draggable: false,
+    progress: undefined,
+    theme: "light",
+  });
+
+}
 
       // Handle successful login (e.g., redirect or store token)
-       if(data.user.role == '1'){
-          router.push("/dashboard/business");
-        } if(usermetaData.role == '3'){
-          router.push("/places");
-        }
-      router.push("/");
+     
 
-      console.log('Login successful:', data);
     } catch (err) {
+        // setMessage(err.message)
+
+      toast.error(err.message || 'Failed to Login', {
+        position: "bottom-center",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+        theme: "light",
+      });
+   
       setError(err.message);
     }
   }
@@ -157,7 +235,7 @@ export default function Home() {
     dispatch(setUserMeta({ user_meta:data }));
     dispatch(setIsAuthenticated({ isAuthenticated: true }));
     console.log("role added");
-    if(data.role == 'super_admin'){
+    if(data.role == '1'){
       router.push("/dashboard/business");
     }else{
       router.push("/");
@@ -264,6 +342,7 @@ export default function Home() {
           </button>
         </form>
       {/* )} */}
+      
     </>
   );
 }

@@ -20,7 +20,7 @@ const CardService = ({business, user_id = null, favoritePageHide = null }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
 
-  console.log("card usineees",business)
+  //.log("card usineees",business)
   // const logoUrl = business.logo && business.logo.includes('/api/media/')
   // ? business.logo.replace('/api/media/', 'media/')
   // : business.logo;
@@ -75,7 +75,7 @@ const CardService = ({business, user_id = null, favoritePageHide = null }) => {
             setIsFavorite(result.is_favorite);
           } else if (favoritePageHide) {
             setIsFavorite(!isFavorite);
-            favoritePageHide(business.business_id);
+            favoritePageHide(business.business_id?business.business_id:business.id);
           }
           // if (user_id && !favoritePageHide) {
           //   const { data: haveData, error: haveError } = await supabase

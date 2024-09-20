@@ -15,10 +15,8 @@ import "react-country-state-city/dist/react-country-state-city.css";
 const Page = () => {
   const [category, setCategory] = useState(null);
 
-  console.log("Category is ",category)
   const [businesses, setBusinesses] = useState([]);
 
-  console.log("usineees",businesses)
   const [loading, setLoading] = useState(true);
   const params = useParams();
   const { user } = useSelector((state) => state.auth);
@@ -31,8 +29,9 @@ const Page = () => {
   const [selectedRating, setSelectedRating] = useState("");
   const [selectedLangauge, setSelectedLangauge] = useState("");
   const [selectedState, setSelectedState] = useState("");
+
   const [selectedCity, setSelectedCity] = useState("");
-  const [discount, setDiscount] = useState(false);
+   const [discount, setDiscount] = useState(false);
   const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
 
   // for infinite scroll
@@ -75,14 +74,14 @@ const Page = () => {
       }
       
     } catch (error) {
-      console.log(error.message);
+      //error.message);
     } finally {
       setLoading(false);
     }
   }
   async function fetchMoreBusiness() {
     try {
-      console.log('runn...');
+      //'runn...');
       const { from, to } = getFromTo();
       const formData = {
         id: params.id,
@@ -120,73 +119,10 @@ const Page = () => {
       }
       
     } catch (error) {
-      console.log(error.message);
+      //error.message);
     }
   }
   
-  // async function fetchCategoryAndBusinesses() { 
-  //   try {
-  //     setLoading(true); 
-      
-  //     const { from, to } = getFromTo();
-  //     // Fetch businesses for this category
-  //     const { data: businessesData, error: businessesError } = await supabase
-  //       .from("category_business")
-  //       .select(
-  //         ` category(*),
-  //         business(*)
-  //       `
-  //       )
-  //       .eq("category_id", params.id)
-  //       .eq("business.approved", "1").eq("business.isArchived", false)
-  //       .range(from, to); 
-
-  //     if (businessesError) throw businessesError;
-  //     setCategory(businessesData[0].category);
-  //     setBusinesses(businessesData.filter((item) => item.business != null));
-  //     setPage(page + 1);
-      
-  //   } catch (error) {
-  //     console.log(error.message);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // }
-
-  // async function fetchMoreBusiness() {
-  //   try {
-  //      console.log('runn...')
-  //     const { from, to } = getFromTo();
-  //     // Fetch businesses for this category
-  //     const { data: businessesData, error: businessesError } = await supabase
-  //       .from("category_business")
-  //       .select(
-  //         `  
-  //         business(*)
-  //       `
-  //       )
-  //       .eq("category_id", params.id)
-  //       .eq("business.approved", "1")
-  //       .eq("business.isArchived", false)
-  //       .order('id', { ascending: true })
-  //       .range(from, to);
-
-  //     if (businessesError) throw businessesError;
-  //     setBusinesses([
-  //       ...businesses,
-  //       ...businessesData.filter((item) => item.business != null),
-  //     ]);
-      
-      
-  //     setPage((page) => page + 1); 
-  //     // businessesData &&
-  //     // [...businessesData.filter((item) => item.business != null)] > 0
-  //     //   ? setHasMore(true)
-  //     //   : setHasMore(false);
-  //   } catch (error) {
-  //     console.log(error.message);
-  //   }
-  // }
 
   const getFromTo = () => {
     const item_per_page = 2;
@@ -200,10 +136,9 @@ const Page = () => {
     setDiscount(!discount);
   };
   const handleSubmit = async (e) => {
+
     e.preventDefault();
-    console.log(
-      `Search for state:${selectedState}, city:${selectedCity}, rating: ${selectedRating}, discount: ${discount}`
-    );
+  
   
     // Build query parameters
     const requestBody = {
@@ -229,8 +164,11 @@ const Page = () => {
       const result = await response.json();
   
       if (response.ok) {
-        console.log("Fetched results:", result.data);
+        //"Fetched results:", selectedState);
+
+
         setBusinesses(result.data);
+    
       } else {
         console.error("Error fetching results:", result.ErrorMsg);
       }
@@ -241,74 +179,7 @@ const Page = () => {
     }
   };
   
-  // search form
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-  //   console.log(
-  //     `Search for state:${selectedState}, city:${selectedCity},rating: ${selectedRating}, discount: ${discount}`
-  //   );
-
-  //   // const { from, to } = getFromTo();
-  //   // setPage(page + 1);
-
-  //   let queryBuilder = supabase
-  //     .from("category_business")
-  //     .select("business(*)")
-  //     .eq("category_id", params.id)
-  //     .eq("business.approved", "1");
-
-  //   if (discount) {
-  //     queryBuilder = queryBuilder
-  //       .not("business.discount_code", "is", null)
-  //       .neq("business.discount_code", "");
-  //   }
-
-  //   if(selectedLangauge){
-  //     queryBuilder = queryBuilder.eq("business.language", selectedLangauge);
-  //   }
-
-  //   if (selectedState) {
-  //     queryBuilder = queryBuilder.eq("business.state", selectedState);
-  //   }
-
-  //   if (selectedCity) {
-  //     queryBuilder = queryBuilder.eq("business.city", selectedCity);
-  //   }
-
-  //   if (selectedRating) {
-  //     const { data: reviewData, error: reviewError } = await supabase.rpc(
-  //       "get_businesses_by_rating",
-  //       { min_rating: selectedRating }
-  //     );
-
-  //     if (reviewError) {
-  //       console.error("Error fetching reviews data:", reviewError);
-  //       return;
-  //     }
-
-  //     const businessIdsWithRating = reviewData.map(
-  //       (review) => review.business_id
-  //     );
-
-  //     if (businessIdsWithRating.length > 0) {
-  //       queryBuilder = queryBuilder.in("business.id", businessIdsWithRating);
-  //     } else {
-  //       return;
-  //     }
-  //   }
-
-  //   const { data, error } = await queryBuilder;
-
-  //   if (error) {
-  //     console.error("Error fetching results:", error);
-  //   } else {
-  //     console.log("Fetched results:", data);
-  //     setBusinesses(data.filter((item) => item.business != null));
-  //   }
-  // };
-
-  // reset form 
-  const resetForm = async () => {
+const resetForm = async () => {
     try {
       // Reset form fields
       setSelectedCity('');
@@ -337,6 +208,7 @@ const Page = () => {
       const result = await response.json();
   
       if (response.ok && result.ErrorCode === 0) {
+        setSelectedState(selectedState)
         setBusinesses(result.data); // Set businesses data
         setHasMore(result.data.length >= 10); // Check if there are more records to load
       } else {
@@ -411,7 +283,7 @@ const Page = () => {
                       }
                     }}
                     onChange={(e) => {
-                      console.log(e);
+                      //e);
                       setstateid(e.id);
                       setSelectedState(e.name);
                     }}
@@ -427,13 +299,14 @@ const Page = () => {
                   <CitySelect
                     countryid={countryid}
                     stateid={stateid}
+                    
                     onTextChange = {(e)=>{
                       if(!e.target.value){ 
                         setSelectedCity('');
                       }
                     }}
                     onChange={(e) => {
-                      console.log(e);
+                      //e);
                       setSelectedCity(e.name);
                     }}
                     placeHolder="Select City"
@@ -488,115 +361,7 @@ const Page = () => {
                   />
                 </div>
 
-                {/* <div className="flex flex-col gap-3 mb-7">
-                    <label
-                      htmlFor="community"
-                      className="text-base font-semibold"
-                    >
-                      Community
-                    </label>
-                    <select
-                      id="community"
-                      name="community"
-                      className="rounded-full outline-none shadow-formFeilds text-sm py-4 px-5 border-2 border-[#E4E4E4] w-full"
-                    >
-                      <option value="">Select community</option>
-                      <option value="arabs-in-usa">Arabic Communities</option>
-                      <option value="egyptian-in-boston">
-                        Egyptians in USA
-                      </option>
-                      <option value="jordans-in-california">
-                        Jordanians in USA
-                      </option>
-                      <option value="moroccans-in-california">
-                        Moroccans in USA
-                      </option>
-                      <option value="syrians-in-california">
-                        Syrians in USA
-                      </option>
-                      <option value="iraqis-in-california">
-                        Iraqis in USA
-                      </option>
-                      <option value="lebanese-in-california">
-                        Lebanese in USA
-                      </option>
-                      <option value="japanese-communities">
-                        Japanese Community
-                      </option>
-                      <option value="spanish-communities">
-                        Spanish Communities
-                      </option>
-                      <option value="portuguese-communities">
-                        Portuguese Communities
-                      </option>
-                      <option value="french-communities">
-                        French communities
-                      </option>
-                      <option value="english-communities">
-                        English Communities
-                      </option>
-                      <option value="algerians-in-usa">Algerians in USA</option>
-                      <option value="saudis-in-usa">Saudis in USA</option>
-                      <option value="yemenis-in-usa">Yemenis in USA</option>
-                    </select>
-                  </div> */}
-
-                {/* <div className="flex flex-col gap-3 mb-7">
-                    <label className="text-base font-semibold">Language</label>
-                    <div>
-                      <div className="flex gap-2">
-                        <input
-                          type="checkbox"
-                          id="some_id"
-                          className="appearance-none w-4 h-4 cursor-pointer outline-1 outline outline-gray-200 border-[3px] border-transparent bg-white mt-1 shrink-0 checked:border-white checked:bg-primary  "
-                        />
-                        <label htmlFor="some_id" className="cursor-pointer">
-                          Arabic
-                        </label>
-                      </div>
-                      <div className="flex gap-2">
-                        <input
-                          type="checkbox"
-                          id="some_id1"
-                          className="appearance-none w-4 h-4 cursor-pointer outline-1 outline outline-gray-200 border-[3px] border-transparent bg-white mt-1 shrink-0 checked:border-white checked:bg-primary  "
-                        />
-                        <label htmlFor="some_id1" className="cursor-pointer">
-                          Arabic
-                        </label>
-                      </div>
-                      <div className="flex gap-2">
-                        <input
-                          type="checkbox"
-                          id="some_id2"
-                          className="appearance-none w-4 h-4 cursor-pointer outline-1 outline outline-gray-200 border-[3px] border-transparent bg-white mt-1 shrink-0 checked:border-white checked:bg-primary  "
-                        />
-                        <label htmlFor="some_id2" className="cursor-pointer">
-                          Arabic
-                        </label>
-                      </div>
-                      <div className="flex gap-2">
-                        <input
-                          type="checkbox"
-                          id="some_id3"
-                          className="appearance-none w-4 h-4 cursor-pointer outline-1 outline outline-gray-200 border-[3px] border-transparent bg-white mt-1 shrink-0 checked:border-white checked:bg-primary  "
-                        />
-                        <label htmlFor="some_id3" className="cursor-pointer">
-                          Arabic
-                        </label>
-                      </div>
-                      <div className="flex gap-2">
-                        <input
-                          type="checkbox"
-                          id="some_id4"
-                          className="appearance-none w-4 h-4 cursor-pointer outline-1 outline outline-gray-200 border-[3px] border-transparent bg-white mt-1 shrink-0 checked:border-white checked:bg-primary  "
-                        />
-                        <label htmlFor="some_id4" className="cursor-pointer">
-                          Arabic
-                        </label>
-                      </div>
-                    </div>
-                  </div> */}
-
+                
                 <button type="submit" className="bg-primary duration-300 text-white mb-3 px-6 py-3 rounded-full w-full hover:opacity-60">
                   Search
                 </button>

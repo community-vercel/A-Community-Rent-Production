@@ -189,7 +189,21 @@ const Sidebar = ({ openDrawer, setOpenDrawer }) => {
                 Favorites
               </span>
             </Link>
-
+            {/* <Link
+              href="/dashboard/users"
+              className={`flex relative  py-3 justify-center items-center ${
+                openDrawer === true && "!justify-normal"
+              }`}
+            >
+              <UserIcon className={`h-7 w-7 text-primary`} />
+              <span
+                className={`text-white absolute pointer-events-none left-8 min-w-[300px] transition-all duration-300 text-[15px] pl-3 w-full hover:text-primary opacity-0 ${
+                  openDrawer === true && "!opacity-100 pointer-events-auto"
+                }`}
+              >
+                Users
+              </span>
+            </Link> */}
             <MenuDropDown
               openDrawer={openDrawer}
               text="Business Directory"
@@ -233,8 +247,73 @@ const Sidebar = ({ openDrawer, setOpenDrawer }) => {
                     </span>
                   </Link>
                 </li>
+
+                <li>
+                  <Link
+                    href="/dashboard/reviews"
+                    className={`flex relative  py-1 justify-center items-center ${
+                      openDrawer === true && "!justify-normal"
+                    }`}
+                  >
+                    <CheckBadgeIcon className={`h-4 w-4 text-primary`} />
+                    <span
+                      className={`text-white absolute pointer-events-none left-4 max-w-[300px] transition-all duration-300 text-sm pl-3 w-full hover:text-primary opacity-0 ${
+                        openDrawer === true &&
+                        "!opacity-100 pointer-events-auto"
+                      }`}
+                    >
+                      Reviews
+                    </span>
+                  </Link>
+                </li>
               </ul>
             </MenuDropDown>
+
+            {/* <MenuDropDown
+              openDrawer={openDrawer}
+              text="Business Directory"
+              icon={<FolderIcon className={`h-7 w-7 text-primary`} />}
+            >
+              <ul className="max-w-[200px] mx-auto mb-2 space-y-1">
+                <li>
+                  <Link
+                    href="/dashboard/business"
+                    className={`flex relative  py-1 justify-center items-center ${
+                      openDrawer === true && "!justify-normal"
+                    }`}
+                  >
+                    <BuildingOfficeIcon className={`h-4 w-4 text-primary`} />
+                    <span
+                      className={`text-white absolute pointer-events-none left-4 max-w-[300px] transition-all duration-300 text-sm pl-3 w-full hover:text-primary opacity-0 ${
+                        openDrawer === true &&
+                        "!opacity-100 pointer-events-auto"
+                      }`}
+                    >
+                      Businesses
+                    </span>
+                  </Link>
+                </li>
+
+                <li>
+                  <Link
+                    href="/dashboard/categories"
+                    className={`flex relative  py-1 justify-center items-center ${
+                      openDrawer === true && "!justify-normal"
+                    }`}
+                  >
+                    <RectangleStackIcon className={`h-4 w-4 text-primary`} />
+                    <span
+                      className={`text-white absolute pointer-events-none left-4 max-w-[300px] transition-all duration-300 text-sm pl-3 w-full hover:text-primary opacity-0 ${
+                        openDrawer === true &&
+                        "!opacity-100 pointer-events-auto"
+                      }`}
+                    >
+                      Categories
+                    </span>
+                  </Link>
+                </li>
+              </ul>
+            </MenuDropDown> */}
 
             <Link
               href="/places"
@@ -258,72 +337,147 @@ const Sidebar = ({ openDrawer, setOpenDrawer }) => {
           auth.user_meta.role != "3" &&
           auth.user_meta.role != "1" && (
             <>
-              <Link
-                href="/favorite"
-                className={`flex relative  py-3 justify-center items-center ${
-                  openDrawer === true && "!justify-normal"
+            {/* <Link
+              href="/favorite"
+              className={`flex relative  py-3 justify-center items-center ${
+                openDrawer === true && "!justify-normal"
+              }`}
+            >
+              <HeartIcon className={`h-7 w-7 text-primary`} />
+              <span
+                className={`text-white absolute pointer-events-none left-8 min-w-[300px] transition-all duration-300 text-[15px] pl-3 w-full hover:text-primary opacity-0 ${
+                  openDrawer === true && "!opacity-100 pointer-events-auto"
                 }`}
               >
-                <HeartIcon className={`h-7 w-7 text-primary`} />
-                <span
-                  className={`text-white absolute pointer-events-none left-8 min-w-[300px] transition-all duration-300 text-[15px] pl-3 w-full hover:text-primary opacity-0 ${
-                    openDrawer === true && "!opacity-100 pointer-events-auto"
-                  }`}
-                >
-                  Favorites
-                </span>
-              </Link>
-              <Link
-                href="/places"
-                className={`flex relative  py-3 justify-center items-center ${
-                  openDrawer === true && "!justify-normal"
+                Favorites
+              </span>
+            </Link> */}
+            {/* <Link
+              href="/dashboard/users"
+              className={`flex relative  py-3 justify-center items-center ${
+                openDrawer === true && "!justify-normal"
+              }`}
+            >
+              <UserIcon className={`h-7 w-7 text-primary`} />
+              <span
+                className={`text-white absolute pointer-events-none left-8 min-w-[300px] transition-all duration-300 text-[15px] pl-3 w-full hover:text-primary opacity-0 ${
+                  openDrawer === true && "!opacity-100 pointer-events-auto"
                 }`}
               >
-                <HomeIcon className={`h-7 w-7 text-primary`} />
-                <span
-                  className={`text-white absolute pointer-events-none left-8 min-w-[300px] transition-all duration-300 text-[15px] pl-3 w-full hover:text-primary opacity-0 ${
-                    openDrawer === true && "!opacity-100 pointer-events-auto"
-                  }`}
-                >
-                  Welcome Page
-                </span>
-              </Link>
-              <Link
-                href="#"
-                className={`flex relative  py-3 justify-center items-center ${
-                  openDrawer === true && "!justify-normal"
-                }`}
-              >
-                <UserGroupIcon className={`h-7 w-7 text-primary`} />
-                <span
-                  className={`text-white absolute pointer-events-none left-8 min-w-[300px] transition-all duration-300 text-[15px] pl-3 w-full hover:text-primary opacity-0 ${
-                    openDrawer === true && "!opacity-100 pointer-events-auto"
-                  }`}
-                >
-                  MishMish Community
-                </span>
-              </Link>
+                Users
+              </span>
+            </Link> */}
+            <MenuDropDown
+              openDrawer={openDrawer}
+              text="Business Directory"
+              icon={<FolderIcon className={`h-7 w-7 text-primary`} />}
+            >
+              <ul className="max-w-[200px] mx-auto mb-2 space-y-1">
+                <li>
+                  <Link
+                    href="/dashboard/business"
+                    className={`flex relative  py-1 justify-center items-center ${
+                      openDrawer === true && "!justify-normal"
+                    }`}
+                  >
+                    <BuildingOfficeIcon className={`h-4 w-4 text-primary`} />
+                    <span
+                      className={`text-white absolute pointer-events-none left-4 max-w-[300px] transition-all duration-300 text-sm pl-3 w-full hover:text-primary opacity-0 ${
+                        openDrawer === true &&
+                        "!opacity-100 pointer-events-auto"
+                      }`}
+                    >
+                      Businesses
+                    </span>
+                  </Link>
+                </li>
 
-              <Link
-                href="#"
-                className={`flex relative  py-3 justify-center items-center ${
-                  openDrawer === true && "!justify-normal"
-                }`}
-              >
-                <CalendarIcon className={`h-7 w-7 text-primary`} />
-                <span
-                  className={`text-white absolute pointer-events-none left-8 min-w-[300px] transition-all duration-300 text-[15px] pl-3 w-full hover:text-primary opacity-0 ${
-                    openDrawer === true && "!opacity-100 pointer-events-auto"
-                  }`}
-                >
-                  Events
-                </span>
-              </Link>
-            </>
-          )}
+                <li>
+                  <Link
+                    href="/dashboard/categories"
+                    className={`flex relative  py-1 justify-center items-center ${
+                      openDrawer === true && "!justify-normal"
+                    }`}
+                  >
+                    <RectangleStackIcon className={`h-4 w-4 text-primary`} />
+                    <span
+                      className={`text-white absolute pointer-events-none left-4 max-w-[300px] transition-all duration-300 text-sm pl-3 w-full hover:text-primary opacity-0 ${
+                        openDrawer === true &&
+                        "!opacity-100 pointer-events-auto"
+                      }`}
+                    >
+                      Categories
+                    </span>
+                  </Link>
+                </li>
 
-        {!auth.user && (
-          <>
+                {/* <li>
+                  <Link
+                    href="/dashboard/reviews"
+                    className={`flex relative  py-1 justify-center items-center ${
+                      openDrawer === true && "!justify-normal"
+                    }`}
+                  >
+                    <CheckBadgeIcon className={`h-4 w-4 text-primary`} />
+                    <span
+                      className={`text-white absolute pointer-events-none left-4 max-w-[300px] transition-all duration-300 text-sm pl-3 w-full hover:text-primary opacity-0 ${
+                        openDrawer === true &&
+                        "!opacity-100 pointer-events-auto"
+                      }`}
+                    >
+                      Reviews
+                    </span>
+                  </Link>
+                </li> */}
+              </ul>
+            </MenuDropDown>
+
+            {/* <MenuDropDown
+              openDrawer={openDrawer}
+              text="Business Directory"
+              icon={<FolderIcon className={`h-7 w-7 text-primary`} />}
+            >
+              <ul className="max-w-[200px] mx-auto mb-2 space-y-1">
+                <li>
+                  <Link
+                    href="/dashboard/business"
+                    className={`flex relative  py-1 justify-center items-center ${
+                      openDrawer === true && "!justify-normal"
+                    }`}
+                  >
+                    <BuildingOfficeIcon className={`h-4 w-4 text-primary`} />
+                    <span
+                      className={`text-white absolute pointer-events-none left-4 max-w-[300px] transition-all duration-300 text-sm pl-3 w-full hover:text-primary opacity-0 ${
+                        openDrawer === true &&
+                        "!opacity-100 pointer-events-auto"
+                      }`}
+                    >
+                      Businesses
+                    </span>
+                  </Link>
+                </li>
+
+                <li>
+                  <Link
+                    href="/dashboard/categories"
+                    className={`flex relative  py-1 justify-center items-center ${
+                      openDrawer === true && "!justify-normal"
+                    }`}
+                  >
+                    <RectangleStackIcon className={`h-4 w-4 text-primary`} />
+                    <span
+                      className={`text-white absolute pointer-events-none left-4 max-w-[300px] transition-all duration-300 text-sm pl-3 w-full hover:text-primary opacity-0 ${
+                        openDrawer === true &&
+                        "!opacity-100 pointer-events-auto"
+                      }`}
+                    >
+                      Categories
+                    </span>
+                  </Link>
+                </li>
+              </ul>
+            </MenuDropDown> */}
+
             <Link
               href="/places"
               className={`flex relative  py-3 justify-center items-center ${
@@ -339,35 +493,165 @@ const Sidebar = ({ openDrawer, setOpenDrawer }) => {
                 Welcome Page
               </span>
             </Link>
+          </>
+          )}
+
+        {!auth.user && (
+            <>
             <Link
-              href="#"
+              href="/favorite"
               className={`flex relative  py-3 justify-center items-center ${
                 openDrawer === true && "!justify-normal"
               }`}
             >
-              <UserGroupIcon className={`h-7 w-7 text-primary`} />
+              <HeartIcon className={`h-7 w-7 text-primary`} />
               <span
                 className={`text-white absolute pointer-events-none left-8 min-w-[300px] transition-all duration-300 text-[15px] pl-3 w-full hover:text-primary opacity-0 ${
                   openDrawer === true && "!opacity-100 pointer-events-auto"
                 }`}
               >
-                MishMish Community
+                Favorites
               </span>
             </Link>
-
             <Link
-              href="#"
+              href="/dashboard/users"
               className={`flex relative  py-3 justify-center items-center ${
                 openDrawer === true && "!justify-normal"
               }`}
             >
-              <CalendarIcon className={`h-7 w-7 text-primary`} />
+              <UserIcon className={`h-7 w-7 text-primary`} />
               <span
                 className={`text-white absolute pointer-events-none left-8 min-w-[300px] transition-all duration-300 text-[15px] pl-3 w-full hover:text-primary opacity-0 ${
                   openDrawer === true && "!opacity-100 pointer-events-auto"
                 }`}
               >
-                Events
+                Users
+              </span>
+            </Link>
+            <MenuDropDown
+              openDrawer={openDrawer}
+              text="Business Directory"
+              icon={<FolderIcon className={`h-7 w-7 text-primary`} />}
+            >
+              <ul className="max-w-[200px] mx-auto mb-2 space-y-1">
+                <li>
+                  <Link
+                    href="/dashboard/business"
+                    className={`flex relative  py-1 justify-center items-center ${
+                      openDrawer === true && "!justify-normal"
+                    }`}
+                  >
+                    <BuildingOfficeIcon className={`h-4 w-4 text-primary`} />
+                    <span
+                      className={`text-white absolute pointer-events-none left-4 max-w-[300px] transition-all duration-300 text-sm pl-3 w-full hover:text-primary opacity-0 ${
+                        openDrawer === true &&
+                        "!opacity-100 pointer-events-auto"
+                      }`}
+                    >
+                      Businesses
+                    </span>
+                  </Link>
+                </li>
+
+                <li>
+                  <Link
+                    href="/dashboard/categories"
+                    className={`flex relative  py-1 justify-center items-center ${
+                      openDrawer === true && "!justify-normal"
+                    }`}
+                  >
+                    <RectangleStackIcon className={`h-4 w-4 text-primary`} />
+                    <span
+                      className={`text-white absolute pointer-events-none left-4 max-w-[300px] transition-all duration-300 text-sm pl-3 w-full hover:text-primary opacity-0 ${
+                        openDrawer === true &&
+                        "!opacity-100 pointer-events-auto"
+                      }`}
+                    >
+                      Categories
+                    </span>
+                  </Link>
+                </li>
+
+                <li>
+                  <Link
+                    href="/dashboard/reviews"
+                    className={`flex relative  py-1 justify-center items-center ${
+                      openDrawer === true && "!justify-normal"
+                    }`}
+                  >
+                    <CheckBadgeIcon className={`h-4 w-4 text-primary`} />
+                    <span
+                      className={`text-white absolute pointer-events-none left-4 max-w-[300px] transition-all duration-300 text-sm pl-3 w-full hover:text-primary opacity-0 ${
+                        openDrawer === true &&
+                        "!opacity-100 pointer-events-auto"
+                      }`}
+                    >
+                      Reviews
+                    </span>
+                  </Link>
+                </li>
+              </ul>
+            </MenuDropDown>
+
+            {/* <MenuDropDown
+              openDrawer={openDrawer}
+              text="Business Directory"
+              icon={<FolderIcon className={`h-7 w-7 text-primary`} />}
+            >
+              <ul className="max-w-[200px] mx-auto mb-2 space-y-1">
+                <li>
+                  <Link
+                    href="/dashboard/business"
+                    className={`flex relative  py-1 justify-center items-center ${
+                      openDrawer === true && "!justify-normal"
+                    }`}
+                  >
+                    <BuildingOfficeIcon className={`h-4 w-4 text-primary`} />
+                    <span
+                      className={`text-white absolute pointer-events-none left-4 max-w-[300px] transition-all duration-300 text-sm pl-3 w-full hover:text-primary opacity-0 ${
+                        openDrawer === true &&
+                        "!opacity-100 pointer-events-auto"
+                      }`}
+                    >
+                      Businesses
+                    </span>
+                  </Link>
+                </li>
+
+                <li>
+                  <Link
+                    href="/dashboard/categories"
+                    className={`flex relative  py-1 justify-center items-center ${
+                      openDrawer === true && "!justify-normal"
+                    }`}
+                  >
+                    <RectangleStackIcon className={`h-4 w-4 text-primary`} />
+                    <span
+                      className={`text-white absolute pointer-events-none left-4 max-w-[300px] transition-all duration-300 text-sm pl-3 w-full hover:text-primary opacity-0 ${
+                        openDrawer === true &&
+                        "!opacity-100 pointer-events-auto"
+                      }`}
+                    >
+                      Categories
+                    </span>
+                  </Link>
+                </li>
+              </ul>
+            </MenuDropDown> */}
+
+            <Link
+              href="/places"
+              className={`flex relative  py-3 justify-center items-center ${
+                openDrawer === true && "!justify-normal"
+              }`}
+            >
+              <HomeIcon className={`h-7 w-7 text-primary`} />
+              <span
+                className={`text-white absolute pointer-events-none left-8 min-w-[300px] transition-all duration-300 text-[15px] pl-3 w-full hover:text-primary opacity-0 ${
+                  openDrawer === true && "!opacity-100 pointer-events-auto"
+                }`}
+              >
+                Welcome Page
               </span>
             </Link>
           </>

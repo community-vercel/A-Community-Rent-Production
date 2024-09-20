@@ -83,7 +83,7 @@ const Header = () => {
         "
         >
           <li>
-            <Link href={` ${user.id ? "/dashboard/profile/" : "/login"} `}>
+            <Link href={` ${user.id ? "/dashboard/profile" : "/login"} `}>
               <UserIcon className="h-6 w-6" />
             </Link>
           </li>

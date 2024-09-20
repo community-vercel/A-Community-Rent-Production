@@ -27,13 +27,15 @@ const Page = () => {
       name: "Actions",
       cell: (row) => (
         <>
-        
+        {user.role &&(
           <Link
             href={`/dashboard/categories/update/${row.id}`}
             className="underline"
           >
             <PencilSquareIcon className="w-5 h-5" />
           </Link>
+        )}
+          
           {/* {row.user_id == user.id ? (
             <Link
               href={`/dashboard/business/update/${row.id}`}
@@ -58,10 +60,10 @@ const Page = () => {
   );
 
   useEffect(() => {
-    if (!user || !user.id) {
-      router.push("/");
-      return;
-    }
+    // if (!user || !user.id) {
+    //   router.push("/");
+    //   return;
+    // }
     const fetchCategories = async () => {
       try {
         let response;
@@ -109,12 +111,16 @@ const Page = () => {
       ) : (
         <div className="w-[95%] mx-auto">
           <div className="flex justify-end flex-wrap my-6">
+            
+          {user.role&&
+            (
             <Link
               href="/dashboard/categories/add"
               className="bg-primary text-white text-center text-sm rounded-full py-2 px-9 border-8 border-white"
             >
               Add
             </Link>
+            )}
           </div>
           <div className="mt-5">
             <DataTable

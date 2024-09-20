@@ -2,7 +2,7 @@
 import SubHeaderComponent from "@/components/datatable-components/SubHeaderComponent";
 import Loader from "@/components/Loader";
 import { supabase } from "@/lib/supabase";
-import { EyeIcon, PencilSquareIcon } from "@heroicons/react/16/solid";
+import { EyeIcon, PencilSquareIcon,PencilIcon,TrashIcon } from "@heroicons/react/16/solid";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -16,7 +16,25 @@ const Page = () => {
   const [loading, setLoading] = useState(false);
   const [selectedRowsState, setSelectedRows] = useState(false);
   const [toggledClearRows, setToggleClearRows] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const openModal = (id) => {
+    console.log("Hi",id)
+    setDeleteId(id);
+    setShowModal(true);
+  };
 
+  const closeModal = () => {
+    setShowModal(false);
+    setDeleteId(null);
+  };
+
+  const confirmDelete = () => {
+    if (deleteId) {
+      handleDelete(deleteId);
+    }
+    closeModal(); // Close the modal after deletion
+  };
   const columns = [
     {
       name: "Title",
@@ -58,14 +76,67 @@ const Page = () => {
       name: "Actions",
       cell: (row) => (
         <>
-          <Link href={`/dashboard/reviews/${row.id}`} className="underline">
+        <Link href={`/dashboard/reviews/${row.id}`} className="underline mr-4">
             <EyeIcon className="w-5 h-5" />
           </Link>
+          {(user.role === 1 || user.role === '1' || user.id === row.user__id) && (
+          <>
+           <Link href={`/dashboard/reviews/${row.id}`} className="underline mr-4">
+
+           <PencilIcon className="w-5 h-5" />
+         </Link>
+   
+         <button
+       className="bg-red-500 text-white w-7 h-7 rounded-full flex justify-center items-center"
+       onClick={() => openModal(row.id)} // Open modal on click
+     >
+       <TrashIcon className="w-4 h-4" />
+     </button>
+     </>
+)}
+          
+         
         </>
       ),
     },
   ];
+  const handleDelete = async (id) => {
+    try {
+      // Prepare the data to send to the Django API
+      const updateData = [{
+        id: id,
+        status: reviews.status,  // Assuming '4' corresponds to 'archived' or similar status in your model
+        isArchived: true
+      }];
+  
+      const response = await fetch(`${serverurl}update-reviews/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      });
+  
+      const result = await response.json();
+      if (response.ok) {
+        if (result.ErrorCode === 0) {
+          // Success: Redirect to reviews dashboard or show success message
+          getReviews();
+          setToggleClearRows(!toggledClearRows);        } else {
+          // Handle error from the API
+          console.error(result.ErrorMsg);
+        }
+      } else {
+        // Handle server-side error
+        throw new Error(result.ErrorMsg || 'Failed to update review');
+      }
+    } catch (error) {
+      console.log("Error updating review:", error);
+    }
 
+
+ 
+      };
   const [reviews, setReviews] = useState([]);
   const [filterText, setFilterText] = useState("");
   const filteredItems = reviews.filter(
@@ -76,13 +147,11 @@ const Page = () => {
   );
 
   useEffect(() => {
-    if (!user && user_meta.role !== "1" || user_meta.role !== 1) router.push("/");
+    if (!user ) router.push("/");
     getReviews();
   }, []);
 
-  useEffect(() => {
-    if (!user && user_meta.role !== "1" || user_meta.role !== 1) router.push("/"); 
-  }, [user]);
+ 
 
   const serverurl=process.env.NEXT_PUBLIC_DJANGO_URL
 
@@ -100,9 +169,7 @@ const Page = () => {
   };
 
 
-  useEffect(() => {
-    if ( user_meta.role !== 1) router.push("/");
-  }, [user_meta]);
+  
 
 
    // select selected rows
@@ -236,6 +303,27 @@ const Page = () => {
 
   return (
     <>
+    {showModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 ">
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <p className="mb-4">Are you sure you want to delete this item?</p>
+            <div className="flex justify-end space-x-4">
+              <button
+                className="bg-gray-500 text-white px-4 py-2 rounded"
+                onClick={closeModal} // Close modal if No is clicked
+              >
+                No
+              </button>
+              <button
+                className="bg-red-500 text-white px-4 py-2 rounded"
+                onClick={confirmDelete} // Confirm deletion if Yes is clicked
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {loading ? (
         <Loader />
       ) : (
@@ -264,11 +352,12 @@ const Page = () => {
                         <option className="cursor-pointer" value="reject">
                           Reject
                         </option>
-                        </>
-                      )}
-                      <option className="cursor-pointer" value="delete">
+                        <option className="cursor-pointer" value="delete">
                         Delete
                       </option>
+                        </>
+                      )}
+                     
                     </select>
                     <SubHeaderComponent
                       filterText={filterText}

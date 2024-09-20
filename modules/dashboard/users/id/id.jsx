@@ -15,7 +15,7 @@ import AddressInput from "@/components/AdressInput";
 const Id = () => {
   const params = useParams();
   const { user, user_meta } = useSelector((state) => state.auth);
-  const [active, setActive] = useState(false);
+  const [is_active, setActive] = useState(false);
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState();
   const [rolesFromApi, setRolesFromApi] = useState([]);
@@ -53,11 +53,18 @@ const Id = () => {
   };
 
   useEffect(() => {
-    if (!user.id || user_meta.role !== 1) {
-      router.push("/");
+    // Check if params.id is not equal to user.id before performing the checks
+    if (!user || !user.role==1) {
+      // Redirect if user.id doesn't exist or if user_meta.role is not 1
+     
+        router.push("/");
+      
     }
+    
+    // Fetch user details regardless of the condition
     fetchUserDetails();
-  }, []);
+  }, []); // Adding dependencies for better control
+  
 
   const serverurl = process.env.NEXT_PUBLIC_DJANGO_URL;
 
@@ -94,8 +101,9 @@ const Id = () => {
     
     const requestBody = {
       ...formData,
+      is_active:is_active,
       id:params.id,
-      roles: Object.keys(checkedRoles).filter(role => checkedRoles[role]).map(role => ({ role, status: "pending" }))
+      roles: Object.keys(checkedRoles).filter(role => checkedRoles[role]).map(role => ({ role, status: "active" }))
     };
   
     try {
@@ -244,13 +252,15 @@ const Id = () => {
             </div>
 
             <div className="mt-8 mb-5 flex gap-2 items-center">
-              <Formlabel text="Active:" />
+              <Formlabel text="is_active:" />
               <input
-                type="checkbox"
-                {...register("active")}
-                defaultChecked={active}
-                className="mb-3"
-              />
+  type="checkbox"
+  {...register("is_active")}
+  defaultChecked={is_active}
+  onChange={(e) => setActive(e.target.checked)} // update value to true/false based on checked state
+  className="mb-3"
+/>
+
             </div>
             <div className="mb-5">
               <Formlabel text="Address" />
